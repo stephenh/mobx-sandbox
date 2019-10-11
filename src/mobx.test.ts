@@ -4,7 +4,6 @@ import { deepObserve } from "mobx-utils";
 const personData = {
   name: "John",
   age: 42,
-  showAge: false,
   address: {
     street: 1234,
     city: "omaha",
@@ -90,6 +89,16 @@ describe("mobx", () => {
     expect(lastSeenStreet).toEqual(2);
     expect(lastSeenCity).toEqual("santa rosa");
     expect(streetTick).toEqual(2);
+    expect(cityTick).toEqual(2);
+  });
+
+  it("keeps deep listeners on spread", () => {
+    person.address = { ...person.address, street: 2 };
+    // street was supposed to change/tick
+    expect(lastSeenStreet).toEqual(2);
+    expect(streetTick).toEqual(2);
+    // but city didn't change and still registered a tick
+    expect(lastSeenCity).toEqual(personData.address.city);
     expect(cityTick).toEqual(2);
   });
 });
