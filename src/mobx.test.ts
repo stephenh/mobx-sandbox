@@ -84,4 +84,12 @@ describe("mobx", () => {
     expect(cityTick).toEqual(2);
     expect(personTick).toEqual(3);
   });
+
+  it("keeps deep listeners", () => {
+    person.address = { street: 2, city: "santa rosa" };
+    expect(lastSeenStreet).toEqual(2);
+    expect(lastSeenCity).toEqual("santa rosa");
+    expect(streetTick).toEqual(2);
+    expect(cityTick).toEqual(2);
+  });
 });
