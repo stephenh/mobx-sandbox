@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
 import { createObjectState, required } from "./formState";
@@ -12,11 +12,18 @@ const App: React.FC = () => {
       books: {
         type: "list",
         config: {
-          title: { type: "string" },
+          title: { type: "string", rules: [required] },
         },
       },
     }),
   );
+
+  useEffect(() => {
+    formState.set({
+      firstName: "a1",
+      books: [{ title: "b1" }],
+    });
+  }, [formState]);
 
   return useObserver(() => (
     <div className="App">
@@ -45,6 +52,19 @@ const App: React.FC = () => {
           touched: {formState.lastName.touched.toString()}
           valid: {formState.lastName.valid.toString()}
           errors: {formState.lastName.errors}
+        </div>
+
+        <div>
+          Title
+          <input
+            id="title"
+            value={formState.books.rows[0]?.title?.value || ""}
+            onBlur={() => formState.books.rows[0].title.blur()}
+            onChange={(e) => formState.books.rows[0].title.set(e.target.value)}
+          />
+          touched: {formState.books.rows[0]?.title?.touched?.toString()}
+          valid: {formState.books.rows[0]?.title?.valid?.toString()}
+          errors: {formState.books.rows[0]?.title?.errors}
         </div>
 
         <div>Rows valid: {formState.books.valid.toString()}</div>
