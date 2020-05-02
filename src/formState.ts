@@ -17,7 +17,8 @@
  */
 export type ObjectState<T> = FieldStates<T> & {
   valid: boolean;
-  toInput(): T;
+  value: T;
+  set(state: Partial<T>): void;
 };
 
 type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? ListFieldState<U> : FieldState<T[P]> };
@@ -46,12 +47,14 @@ export interface FieldState<T> {
   set(value: T): void;
 }
 
-/** T is the type of each row. */
-interface ListFieldState<T> extends FieldState<T[]> {}
+/** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
+interface ListFieldState<U> extends FieldState<U[]> {
+  rows: Array<ObjectState<U>>;
+}
 
 /** Config rules for each field in `T` that we're editing in a form. */
 type ObjectConfig<T> = {
-  [P in keyof T]: TextFieldConfig | ListFieldConfig<T[P]>;
+  [P in keyof T]: T[P] extends Array<infer U> ? ListFieldConfig<U> : TextFieldConfig;
 };
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
@@ -69,16 +72,29 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     if (config.type === "string") {
       // @ts-ignore
       return [key, newTextFieldState(config.rules || [])];
+    } else if (config.type === "list") {
+      // @ts-ignore
+      return [key, newListFieldState([], config.config)];
     } else {
-      return [key, newListFieldState([])];
+      throw new Error("Unsupported");
     }
   });
   const fieldNames = Object.keys(config);
   return {
     ...Object.fromEntries(fieldStates),
+
     get valid(): boolean {
       // TODO Not entirely sure why the typeof string is needed here
       return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
+    },
+
+    // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
+    set(value) {
+      fieldNames.forEach((name) => {
+        if (name in value) {
+          (this as any)[name].set((value as any)[name]);
+        }
+      });
     },
   } as ObjectState<T>;
 }
@@ -105,24 +121,53 @@ function newTextFieldState(rules: Rule<string | null | undefined>[]): FieldState
   };
 }
 
-type ListFieldConfig<T> = { type: "list"; rules?: Rule<T>[] };
+/** Config for a list of children, i.e. `U` is `Book` in a form with `books: Book[]`. */
+type ListFieldConfig<U> = {
+  type: "list";
+  /** Rules that can run on the full list of children. */
+  rules?: Rule<U[]>[];
+  /** Config for each child's form state, i.e. each book. */
+  config: ObjectConfig<U>;
+};
 
-function newListFieldState<T>(rules: Rule<T>[]): ListFieldState<T> {
+function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFieldState<U> {
   return {
-    value: [],
+    // Our fundamental state if actually the wrapped Us
+    rows: [] as ObjectState<U>[],
+
+    // And we can derive the values from the ObjectState wrappers
+    get value() {
+      return this.rows.map((r) => r.value);
+    },
+
+    // TODO Should this be true when all rows are touched?
     touched: false,
+
+    // TODO Fix this as any
     rules: rules as any,
+
+    // TODO Look at valid on all rows
     get valid(): boolean {
       return this.rules.every((r) => r(this.value, "firstName") === undefined);
     },
+
+    // TODO Look at errors on all rows
     get errors(): string[] {
       return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
     },
+
+    // TODO Set touched on all rows
     blur() {
       this.touched = true;
     },
-    set(v: T[]) {
-      this.value = v;
+
+    set(values: U[]) {
+      // TODO Should we handle values being a partial update somehow?
+      this.rows = values.map((value) => {
+        const state = createObjectState<U>(config);
+        state.set(value);
+        return state;
+      });
     },
   };
 }

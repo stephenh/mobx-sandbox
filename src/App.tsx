@@ -9,7 +9,12 @@ const App: React.FC = () => {
     createObjectState<AuthorInput>({
       firstName: { type: "string", rules: [required] },
       lastName: { type: "string" },
-      books: { type: "list" },
+      books: {
+        type: "list",
+        config: {
+          title: { type: "string" },
+        },
+      },
     }),
   );
 
