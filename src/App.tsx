@@ -1,26 +1,76 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import { useLocalStore, useObserver } from "mobx-react-lite";
+
+interface AuthorInput {
+  firstName?: string | null | undefined;
+  lastName?: string | null | undefined;
+}
+
+interface FieldState<T> {
+  touched: boolean;
+  valid: boolean;
+  blur(): void;
+  value: T
+}
+
+type FormStore<T> = { [P in keyof T]-?: FieldState<T[P]> } & {
+  toInput(): T;
+}
 
 const App: React.FC = () => {
-  return (
+  const formState = useLocalStore<FormStore<AuthorInput>>(() => ({
+    firstName: {
+      value: "",
+      valid: true,
+      touched: false,
+      blur() {
+        this.touched = true;
+      }
+    },
+    lastName: {
+      value: "",
+      valid: true,
+      touched: false,
+      blur() {
+        this.touched = true;
+      }
+    },
+    toInput() {
+      return {
+        firstName: this.firstName.value,
+        lastName: this.lastName.value,
+      };
+    }
+  }));
+
+  return useObserver(() => (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <div>
+        First Name
+        <input
+          id="firstName"
+          value={formState.firstName.value || ""}
+          onBlur={() => formState.firstName.blur()}
+          onChange={(e) => formState.firstName.value = e.target.value}
+        />
+        touched: {formState.firstName.touched.toString()}
+        </div>
+
+        <div>
+          Last Name
+          <input
+            id="lastName"
+            value={formState.lastName.value || ""}
+            onBlur={() => formState.lastName.blur() }
+            onChange={(e) => formState.lastName.value = e.target.value}
+          />
+          touched: {formState.lastName.touched.toString()}
+        </div>
       </header>
     </div>
-  );
+  ));
 }
 
 export default App;
