@@ -21,13 +21,15 @@ const App: React.FC = () => {
   useEffect(() => {
     formState.set({
       firstName: "a1",
-      books: [{ title: "b1" }],
+      books: [{ title: "b1" }, { title: "b2" }],
     });
   }, [formState]);
 
   return useObserver(() => (
     <div className="App">
       <header className="App-header">
+        <b>Author</b>
+
         <div>
           First Name
           <input
@@ -54,18 +56,25 @@ const App: React.FC = () => {
           errors: {formState.lastName.errors}
         </div>
 
-        <div>
-          Title
-          <input
-            id="title"
-            value={formState.books.rows[0]?.title?.value || ""}
-            onBlur={() => formState.books.rows[0].title.blur()}
-            onChange={(e) => formState.books.rows[0].title.set(e.target.value)}
-          />
-          touched: {formState.books.rows[0]?.title?.touched?.toString()}
-          valid: {formState.books.rows[0]?.title?.valid?.toString()}
-          errors: {formState.books.rows[0]?.title?.errors}
-        </div>
+        <b>Books</b>
+
+        {formState.books.rows.map((row, i) => {
+          return (
+            <div>
+              Title {i}
+              <input
+                value={row.title.value || ""}
+                onBlur={() => row.title.blur()}
+                onChange={(e) => row.title.set(e.target.value)}
+              />
+              touched: {row.title.touched.toString()}
+              valid: {row.title.valid.toString()}
+              errors: {row.title.errors}
+            </div>
+          );
+        })}
+
+        <button onClick={() => formState.books.add({})}>Add book</button>
 
         <div>Rows valid: {formState.books.valid.toString()}</div>
 

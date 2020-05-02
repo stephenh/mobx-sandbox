@@ -50,6 +50,7 @@ export interface FieldState<T> {
 /** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
 interface ListFieldState<U> extends FieldState<U[]> {
   rows: Array<ObjectState<U>>;
+  add(value: U): void;
 }
 
 /** Config rules for each field in `T` that we're editing in a form. */
@@ -91,7 +92,8 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
       fieldNames.forEach((name) => {
-        if (name in value) {
+        // TODO cover value being undefined in a test
+        if (value && name in value) {
           (this as any)[name].set((value as any)[name]);
         }
       });
@@ -149,7 +151,7 @@ function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFi
     get valid(): boolean {
       const value = this.value;
       const collectionValid = this.rules.every((r) => r(value, "firstName") === undefined);
-      const entriesValid = this.rows.every(r => r.valid);
+      const entriesValid = this.rows.every((r) => r.valid);
       return collectionValid && entriesValid;
     },
 
@@ -169,6 +171,13 @@ function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFi
         state.set(value);
         return state;
       });
+    },
+
+    add(value: U): void {
+      // TODO Cover with test
+      const row = createObjectState<U>(config);
+      row.set(value);
+      this.rows = [...this.rows, row];
     },
   };
 }
