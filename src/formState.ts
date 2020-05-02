@@ -1,14 +1,14 @@
 /**
  * Wraps a given input/DTO `T` for editing in a form.
  *
- * Note that this can be hierarchical by having by having a field of `RowsFieldState` that
+ * Note that this can be hierarchical by having by having a field of `ListFieldState` that
  * themselves each wrap an `ObjectState`, i.e.:
  *
  * ```
  * ObjectState for author
  *   - firstName: FieldState
  *   - lastName: FieldState
- *   - rows: RowsFieldState
+ *   - rows: ListFieldState
  *     - [0]: ObjectState for book 1
  *       - title: FieldState
  *     - [1]: ObjectState for book 2
@@ -20,7 +20,7 @@ export type ObjectState<T> = FieldStates<T> & {
   toInput(): T;
 };
 
-type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? RowsFieldState<U> : FieldState<T[P]> };
+type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? ListFieldState<U> : FieldState<T[P]> };
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
 export type Rule<T> = (value: T, name: string) => string | undefined;
@@ -40,17 +40,19 @@ export interface FieldState<T> {
   value: T;
   touched: boolean;
   valid: boolean;
-  rules: Rule<T | null | undefined>[];
+  rules: Rule<T>[];
   errors: string[];
   blur(): void;
   set(value: T): void;
 }
 
 /** T is the type of each row. */
-interface RowsFieldState<T> extends FieldState<T[]> {}
+interface ListFieldState<T> extends FieldState<T[]> {}
 
 /** Config rules for each field in `T` that we're editing in a form. */
-type ObjectConfig<T> = Record<keyof T, { type: "string" | "list" }>;
+type ObjectConfig<T> = {
+  [P in keyof T]: TextFieldConfig | ListFieldConfig<T[P]>;
+};
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
 export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
@@ -65,9 +67,10 @@ export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   const fieldStates = entries(config).map(([key, config]) => {
     if (config.type === "string") {
-      return [key, newTextFieldState()];
+      // @ts-ignore
+      return [key, newTextFieldState(config.rules || [])];
     } else {
-      return [key, newRowsFieldState()];
+      return [key, newListFieldState([])];
     }
   });
   const fieldNames = Object.keys(config);
@@ -80,13 +83,14 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   } as ObjectState<T>;
 }
 
-function newTextFieldState(): FieldState<string | null | undefined> {
+type TextFieldConfig = { type: "string"; rules?: Rule<string | null | undefined>[] };
+
+function newTextFieldState(rules: Rule<string | null | undefined>[]): FieldState<string | null | undefined> {
   return {
     value: "",
     touched: false,
-    rules: [required],
+    rules,
     get valid(): boolean {
-      console.log("validating");
       return this.rules.every((r) => r(this.value, "firstName") === undefined);
     },
     get errors(): string[] {
@@ -101,11 +105,13 @@ function newTextFieldState(): FieldState<string | null | undefined> {
   };
 }
 
-function newRowsFieldState<T>(): RowsFieldState<T> {
+type ListFieldConfig<T> = { type: "list"; rules?: Rule<T>[] };
+
+function newListFieldState<T>(rules: Rule<T>[]): ListFieldState<T> {
   return {
     value: [],
     touched: false,
-    rules: [],
+    rules: rules as any,
     get valid(): boolean {
       return this.rules.every((r) => r(this.value, "firstName") === undefined);
     },

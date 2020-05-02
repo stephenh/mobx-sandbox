@@ -1,13 +1,13 @@
 import React from "react";
 import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
-import { createObjectState } from "./formState";
+import { createObjectState, required } from "./formState";
 import { AuthorInput } from "./domain";
 
 const App: React.FC = () => {
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
-      firstName: { type: "string" },
+      firstName: { type: "string", rules: [required] },
       lastName: { type: "string" },
       books: { type: "list" },
     }),
