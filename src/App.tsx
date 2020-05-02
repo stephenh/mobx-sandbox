@@ -18,40 +18,31 @@ interface FieldState<T> {
   set(value: T): void;
 }
 
+function newTextFieldState(): FieldState<string | null | undefined> {
+  return {
+    value: "",
+    touched: false,
+    rules: [required],
+    get valid(): boolean {
+      return this.rules.every(r => r(this.value));
+    },
+    blur() {
+      this.touched = true;
+    },
+    set(v: string) {
+      this.value = v;
+    }
+  };
+}
+
 type FormStore<T> = { [P in keyof T]-?: FieldState<T[P]> } & {
   toInput(): T;
 }
 
 const App: React.FC = () => {
   const formState = useLocalStore<FormStore<AuthorInput>>(() => ({
-    firstName: {
-      value: "",
-      touched: false,
-      rules: [required],
-      get valid(): boolean {
-        return this.rules.every(r => r(this.value));
-      },
-      blur() {
-        this.touched = true;
-      },
-      set(v: string) {
-        this.value = v;
-      }
-    },
-    lastName: {
-      value: "",
-      touched: false,
-      rules: [],
-      get valid(): boolean {
-        return this.rules.every(r => r(this.value));
-      },
-      blur() {
-        this.touched = true;
-      },
-      set(v: string) {
-        this.value = v;
-      }
-    },
+    firstName: newTextFieldState(),
+    lastName: newTextFieldState(),
     toInput() {
       return {
         firstName: this.firstName.value,
