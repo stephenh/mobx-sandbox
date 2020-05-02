@@ -8,6 +8,7 @@
     "@types/react": "16.9.34",
     "@types/react-dom": "16.9.7",
     "mobx": "^5.15.4",
+    "mobx-react-lite": "^2.0.6",
     "mobx-utils": "^5.5.7",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
@@ -34,5 +35,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "prettier": "^2.0.5"
   }
 }
