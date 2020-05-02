@@ -7,9 +7,9 @@ import { AuthorInput } from "./domain";
 const App: React.FC = () => {
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
-      firstName: null,
-      lastName: null,
-      books: null,
+      firstName: { type: "string" },
+      lastName: { type: "string" },
+      books: { type: "list" },
     })
   );
 

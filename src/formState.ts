@@ -51,10 +51,11 @@ interface RowsFieldState<T> extends FieldState<T[]> {
 }
 
 /** Config rules for each field in `T` that we're editing in a form. */
-type ObjectConfig<T> = {
-  // TODO Actually have config values, i.e. validation rules probably.
-  [P in keyof T]: any;
-}
+type ObjectConfig<T> = Record<keyof T, {type: "string" | "list"}>;
+
+
+// See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
+export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
 
 /**
  * Creates a new `ObjectState` for a given form object `T` given config rules in `config`.
@@ -64,8 +65,8 @@ type ObjectConfig<T> = {
  * individual fields as well as the top-level form/object itself.
  */
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
-  const fieldStates = Object.entries(config).map(([key, value]) => {
-    if (key === "firstName" || key === "lastName") {
+  const fieldStates = entries(config).map(([key, config]) => {
+    if (config.type === "string") {
       return [key, newTextFieldState()];
     } else {
       return [key, newRowsFieldState()];
