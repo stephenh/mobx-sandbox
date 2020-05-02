@@ -50,10 +50,19 @@ export interface FieldState<T> {
 interface RowsFieldState<T> extends FieldState<T[]> {
 }
 
+/** Config rules for each field in `T` that we're editing in a form. */
 type ObjectConfig<T> = {
+  // TODO Actually have config values, i.e. validation rules probably.
   [P in keyof T]: any;
 }
 
+/**
+ * Creates a new `ObjectState` for a given form object `T` given config rules in `config`.
+ *
+ * The returned `ObjectState` can be used in a mobx `useLocalStore` to driven an
+ * interactive form that tracks the current valid/touched/etc. state of both each
+ * individual fields as well as the top-level form/object itself.
+ */
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   const fieldStates = Object.entries(config).map(([key, value]) => {
     if (key === "firstName" || key === "lastName") {
@@ -71,7 +80,6 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     }
   } as ObjectState<T>;
 }
-
 
 function newTextFieldState(): FieldState<string | null | undefined> {
   return {
