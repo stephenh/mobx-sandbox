@@ -8,10 +8,11 @@ interface AuthorInput {
 }
 
 interface FieldState<T> {
+  value: T
   touched: boolean;
   valid: boolean;
   blur(): void;
-  value: T
+  set(value: T): void;
 }
 
 type FormStore<T> = { [P in keyof T]-?: FieldState<T[P]> } & {
@@ -26,6 +27,9 @@ const App: React.FC = () => {
       touched: false,
       blur() {
         this.touched = true;
+      },
+      set(v: string) {
+        this.value = v;
       }
     },
     lastName: {
@@ -34,6 +38,9 @@ const App: React.FC = () => {
       touched: false,
       blur() {
         this.touched = true;
+      },
+      set(v: string) {
+        this.value = v;
       }
     },
     toInput() {
@@ -53,7 +60,7 @@ const App: React.FC = () => {
           id="firstName"
           value={formState.firstName.value || ""}
           onBlur={() => formState.firstName.blur()}
-          onChange={(e) => formState.firstName.value = e.target.value}
+          onChange={(e) => formState.firstName.set(e.target.value)}
         />
         touched: {formState.firstName.touched.toString()}
         </div>
@@ -64,7 +71,7 @@ const App: React.FC = () => {
             id="lastName"
             value={formState.lastName.value || ""}
             onBlur={() => formState.lastName.blur() }
-            onChange={(e) => formState.lastName.value = e.target.value}
+            onChange={(e) => formState.lastName.set(e.target.value)}
           />
           touched: {formState.lastName.touched.toString()}
         </div>
