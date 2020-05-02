@@ -7,15 +7,25 @@ interface AuthorInput {
   lastName?: string | null | undefined;
 }
 
-const required = (v: any) => v !== undefined && v !== null && v !== "";
+/** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
+type Rule<T> = (value: T, name: string) => string | undefined;
 
+/** A rule that validates `value` is not `undefined`, `null`, or empty string. */
+const required: Rule<any> = (v: any) => v !== undefined && v !== null && v !== "" ? undefined : "Required";
+
+/** The current state of a field in the form, i.e. it's value but also touched/validation/etc. state. */
 interface FieldState<T> {
   value: T
   touched: boolean;
   valid: boolean;
-  rules: Array<(value: T) => boolean>;
+  rules: Rule<T | null | undefined>[];
+  errors: string[];
   blur(): void;
   set(value: T): void;
+}
+
+function isNotUndefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
 }
 
 function newTextFieldState(): FieldState<string | null | undefined> {
@@ -24,7 +34,10 @@ function newTextFieldState(): FieldState<string | null | undefined> {
     touched: false,
     rules: [required],
     get valid(): boolean {
-      return this.rules.every(r => r(this.value));
+      return this.rules.every(r => r(this.value, "firstName") === undefined);
+    },
+    get errors(): string[] {
+      return this.rules.map(r => r(this.value, "firstName")).filter(isNotUndefined);
     },
     blur() {
       this.touched = true;
@@ -64,6 +77,7 @@ const App: React.FC = () => {
         />
         touched: {formState.firstName.touched.toString()}
         valid: {formState.firstName.valid.toString()}
+        errors: {formState.firstName.errors}
         </div>
 
         <div>
@@ -76,6 +90,7 @@ const App: React.FC = () => {
           />
           touched: {formState.lastName.touched.toString()}
           valid: {formState.lastName.valid.toString()}
+          errors: {formState.lastName.errors}
         </div>
       </header>
     </div>
