@@ -2,16 +2,7 @@ import React from 'react';
 import './App.css';
 import { useLocalStore, useObserver } from "mobx-react-lite";
 import { createObjectState } from "./formState";
-
-interface AuthorInput {
-  firstName?: string | null | undefined;
-  lastName?: string | null | undefined;
-  books: BookInput[];
-}
-
-interface BookInput {
-  title?: string | null | undefined;
-}
+import { AuthorInput } from "./domain";
 
 const App: React.FC = () => {
   const formState = useLocalStore(() =>
