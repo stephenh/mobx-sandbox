@@ -18,15 +18,15 @@
 export type ObjectState<T> = FieldStates<T> & {
   valid: boolean;
   toInput(): T;
-}
+};
 
-type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? RowsFieldState<U> : FieldState<T[P]> }
+type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? RowsFieldState<U> : FieldState<T[P]> };
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
 export type Rule<T> = (value: T, name: string) => string | undefined;
 
 /** A rule that validates `value` is not `undefined`, `null`, or empty string. */
-export const required: Rule<any> = (v: any) => v !== undefined && v !== null && v !== "" ? undefined : "Required";
+export const required: Rule<any> = (v: any) => (v !== undefined && v !== null && v !== "" ? undefined : "Required");
 
 /**
  * The current state of a field in the form, i.e. it's value but also touched/validation/etc. state.
@@ -37,7 +37,7 @@ export const required: Rule<any> = (v: any) => v !== undefined && v !== null && 
  */
 // TODO: How should T handle null | undefined?
 export interface FieldState<T> {
-  value: T
+  value: T;
   touched: boolean;
   valid: boolean;
   rules: Rule<T | null | undefined>[];
@@ -47,12 +47,10 @@ export interface FieldState<T> {
 }
 
 /** T is the type of each row. */
-interface RowsFieldState<T> extends FieldState<T[]> {
-}
+interface RowsFieldState<T> extends FieldState<T[]> {}
 
 /** Config rules for each field in `T` that we're editing in a form. */
-type ObjectConfig<T> = Record<keyof T, {type: "string" | "list"}>;
-
+type ObjectConfig<T> = Record<keyof T, { type: "string" | "list" }>;
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
 export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
@@ -71,14 +69,14 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     } else {
       return [key, newRowsFieldState()];
     }
-  })
+  });
   const fieldNames = Object.keys(config);
   return {
     ...Object.fromEntries(fieldStates),
     get valid(): boolean {
       // TODO Not entirely sure why the typeof string is needed here
-      return fieldNames.map(name => (this as any)[name]).every(f => f.valid);
-    }
+      return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
+    },
   } as ObjectState<T>;
 }
 
@@ -89,17 +87,17 @@ function newTextFieldState(): FieldState<string | null | undefined> {
     rules: [required],
     get valid(): boolean {
       console.log("validating");
-      return this.rules.every(r => r(this.value, "firstName") === undefined);
+      return this.rules.every((r) => r(this.value, "firstName") === undefined);
     },
     get errors(): string[] {
-      return this.rules.map(r => r(this.value, "firstName")).filter(isNotUndefined);
+      return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
     },
     blur() {
       this.touched = true;
     },
     set(v: string) {
       this.value = v;
-    }
+    },
   };
 }
 
@@ -109,21 +107,20 @@ function newRowsFieldState<T>(): RowsFieldState<T> {
     touched: false,
     rules: [],
     get valid(): boolean {
-      return this.rules.every(r => r(this.value, "firstName") === undefined);
+      return this.rules.every((r) => r(this.value, "firstName") === undefined);
     },
     get errors(): string[] {
-      return this.rules.map(r => r(this.value, "firstName")).filter(isNotUndefined);
+      return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
     },
     blur() {
       this.touched = true;
     },
     set(v: T[]) {
       this.value = v;
-    }
+    },
   };
 }
 
 function isNotUndefined<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
-

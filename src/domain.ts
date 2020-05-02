@@ -1,4 +1,3 @@
-
 // Pretend domain objects for editing in the form, i.e. as generated
 // by a GraphQL schema for a `saveAuthor` mutation that takes an author
 // plus the author's books.

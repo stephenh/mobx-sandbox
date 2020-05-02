@@ -1,4 +1,4 @@
-import {observable, autorun, action} from "mobx";
+import { observable, autorun, action } from "mobx";
 import { deepObserve } from "mobx-utils";
 
 const personData = {
@@ -7,11 +7,10 @@ const personData = {
   address: {
     street: 1234,
     city: "omaha",
-  }
+  },
 };
 
 describe("mobx", () => {
-
   let person: typeof personData;
   let lastSeenAge = 0;
   let lastSeenStreet = 0;

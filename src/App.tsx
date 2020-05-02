@@ -1,5 +1,5 @@
-import React from 'react';
-import './App.css';
+import React from "react";
+import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
 import { createObjectState } from "./formState";
 import { AuthorInput } from "./domain";
@@ -10,23 +10,23 @@ const App: React.FC = () => {
       firstName: { type: "string" },
       lastName: { type: "string" },
       books: { type: "list" },
-    })
+    }),
   );
 
   return useObserver(() => (
     <div className="App">
       <header className="App-header">
         <div>
-        First Name
-        <input
-          id="firstName"
-          value={formState.firstName.value || ""}
-          onBlur={() => formState.firstName.blur()}
-          onChange={(e) => formState.firstName.set(e.target.value)}
-        />
-        touched: {formState.firstName.touched.toString()}
-        valid: {formState.firstName.valid.toString()}
-        errors: {formState.firstName.errors}
+          First Name
+          <input
+            id="firstName"
+            value={formState.firstName.value || ""}
+            onBlur={() => formState.firstName.blur()}
+            onChange={(e) => formState.firstName.set(e.target.value)}
+          />
+          touched: {formState.firstName.touched.toString()}
+          valid: {formState.firstName.valid.toString()}
+          errors: {formState.firstName.errors}
         </div>
 
         <div>
@@ -34,7 +34,7 @@ const App: React.FC = () => {
           <input
             id="lastName"
             value={formState.lastName.value || ""}
-            onBlur={() => formState.lastName.blur() }
+            onBlur={() => formState.lastName.blur()}
             onChange={(e) => formState.lastName.set(e.target.value)}
           />
           touched: {formState.lastName.touched.toString()}
@@ -42,17 +42,12 @@ const App: React.FC = () => {
           errors: {formState.lastName.errors}
         </div>
 
-        <div>
-          Rows
-          valid: {formState.books.valid.toString()}
-        </div>
+        <div>Rows valid: {formState.books.valid.toString()}</div>
 
-        <div>
-          form valid {formState.valid.toString()}
-        </div>
+        <div>form valid {formState.valid.toString()}</div>
       </header>
     </div>
   ));
-}
+};
 
 export default App;
