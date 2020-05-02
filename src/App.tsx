@@ -7,10 +7,13 @@ interface AuthorInput {
   lastName?: string | null | undefined;
 }
 
+const required = (v: any) => v !== undefined && v !== null && v !== "";
+
 interface FieldState<T> {
   value: T
   touched: boolean;
   valid: boolean;
+  rules: Array<(value: T) => boolean>;
   blur(): void;
   set(value: T): void;
 }
@@ -23,8 +26,11 @@ const App: React.FC = () => {
   const formState = useLocalStore<FormStore<AuthorInput>>(() => ({
     firstName: {
       value: "",
-      valid: true,
       touched: false,
+      rules: [required],
+      get valid(): boolean {
+        return this.rules.every(r => r(this.value));
+      },
       blur() {
         this.touched = true;
       },
@@ -34,8 +40,11 @@ const App: React.FC = () => {
     },
     lastName: {
       value: "",
-      valid: true,
       touched: false,
+      rules: [],
+      get valid(): boolean {
+        return this.rules.every(r => r(this.value));
+      },
       blur() {
         this.touched = true;
       },
@@ -63,6 +72,7 @@ const App: React.FC = () => {
           onChange={(e) => formState.firstName.set(e.target.value)}
         />
         touched: {formState.firstName.touched.toString()}
+        valid: {formState.firstName.valid.toString()}
         </div>
 
         <div>
@@ -74,6 +84,7 @@ const App: React.FC = () => {
             onChange={(e) => formState.lastName.set(e.target.value)}
           />
           touched: {formState.lastName.touched.toString()}
+          valid: {formState.lastName.valid.toString()}
         </div>
       </header>
     </div>
