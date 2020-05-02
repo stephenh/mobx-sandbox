@@ -49,6 +49,7 @@ function newTextFieldState(): FieldState<string | null | undefined> {
 }
 
 type FormStore<T> = { [P in keyof T]-?: FieldState<T[P]> } & {
+  valid: boolean;
   toInput(): T;
 }
 
@@ -61,6 +62,9 @@ const App: React.FC = () => {
         firstName: this.firstName.value,
         lastName: this.lastName.value,
       };
+    },
+    get valid(): boolean {
+      return this.firstName.valid && this.lastName.valid;
     }
   }));
 
@@ -91,6 +95,10 @@ const App: React.FC = () => {
           touched: {formState.lastName.touched.toString()}
           valid: {formState.lastName.valid.toString()}
           errors: {formState.lastName.errors}
+        </div>
+
+        <div>
+          form valid {formState.valid.toString()}
         </div>
       </header>
     </div>
