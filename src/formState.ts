@@ -146,12 +146,13 @@ function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFi
     // TODO Fix this as any
     rules: rules as any,
 
-    // TODO Look at valid on all rows
     get valid(): boolean {
-      return this.rules.every((r) => r(this.value, "firstName") === undefined);
+      const value = this.value;
+      const collectionValid = this.rules.every((r) => r(value, "firstName") === undefined);
+      const entriesValid = this.rows.every(r => r.valid);
+      return collectionValid && entriesValid;
     },
 
-    // TODO Look at errors on all rows
     get errors(): string[] {
       return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
     },
