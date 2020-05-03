@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
-import { createObjectState, required } from "./formState";
+import { createObjectState, FieldState, required } from "./formState";
 import { AuthorInput } from "./domain";
+import { observable } from "mobx";
 
 const App: React.FC = () => {
   const formState = useLocalStore(() =>
@@ -32,44 +33,21 @@ const App: React.FC = () => {
 
         <div>
           First Name
-          <input
-            id="firstName"
-            value={formState.firstName.value || ""}
-            onBlur={() => formState.firstName.blur()}
-            onChange={(e) => formState.firstName.set(e.target.value)}
-          />
-          touched: {formState.firstName.touched.toString()}
-          valid: {formState.firstName.valid.toString()}
-          errors: {formState.firstName.errors}
+          <TextField field={formState.firstName} />
         </div>
 
         <div>
           Last Name
-          <input
-            id="lastName"
-            value={formState.lastName.value || ""}
-            onBlur={() => formState.lastName.blur()}
-            onChange={(e) => formState.lastName.set(e.target.value)}
-          />
-          touched: {formState.lastName.touched.toString()}
-          valid: {formState.lastName.valid.toString()}
-          errors: {formState.lastName.errors}
+          <TextField field={formState.lastName} />
         </div>
 
         <b>Books</b>
 
         {formState.books.rows.map((row, i) => {
           return (
-            <div>
+            <div key={i}>
               Title {i}
-              <input
-                value={row.title.value || ""}
-                onBlur={() => row.title.blur()}
-                onChange={(e) => row.title.set(e.target.value)}
-              />
-              touched: {row.title.touched.toString()}
-              valid: {row.title.valid.toString()}
-              errors: {row.title.errors}
+              <TextField field={row.title} />
             </div>
           );
         })}
@@ -83,5 +61,25 @@ const App: React.FC = () => {
     </div>
   ));
 };
+
+function TextField(props: { field: FieldState<string | null | undefined> }) {
+  const field = props.field;
+  // Somewhat odd: input won't update unless we use useObserver, even though our
+  // parent uses `useObserver`
+  return useObserver(() => (
+    <>
+      <input
+        value={field.value || ""}
+        onBlur={() => field.blur()}
+        onChange={(e) => {
+          field.set(e.target.value);
+        }}
+      />
+      touched: {field.touched.toString()}
+      valid: {field.valid.toString()}
+      errors: {field.errors}
+    </>
+  ));
+}
 
 export default App;
