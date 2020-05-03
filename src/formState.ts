@@ -52,6 +52,7 @@ export interface FieldState<T> {
 interface ListFieldState<U> extends FieldState<U[]> {
   rows: Array<ObjectState<U>>;
   add(value: U): void;
+  remove(value: U): void;
 }
 
 /** Config rules for each field in `T` that we're editing in a form. */
@@ -76,7 +77,7 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       return [key, newTextFieldState(key as string, (config as any).rules || [])];
     } else if (config.type === "list") {
       // TODO Fix as any
-      return [key, newListFieldState(key as string, [], (config as any).config)];
+      return [key, newListFieldState(key as string, (config as any).rules || [], (config as any).config)];
     } else {
       throw new Error("Unsupported");
     }
@@ -156,7 +157,7 @@ function newListFieldState<U>(key: string, rules: Rule<U>[], config: ObjectConfi
 
     get valid(): boolean {
       const value = this.value;
-      const collectionValid = this.rules.every((r) => r(value, "firstName") === undefined);
+      const collectionValid = this.rules.every((r) => r(value, key) === undefined);
       const entriesValid = this.rows.every((r) => r.valid);
       return collectionValid && entriesValid;
     },
@@ -183,6 +184,13 @@ function newListFieldState<U>(key: string, rules: Rule<U>[], config: ObjectConfi
       const row = createObjectState<U>(config);
       row.set(value);
       this.rows = [...this.rows, row];
+    },
+
+    remove(value: U): void {
+      const i = this.rows.findIndex((r) => r.value === value);
+      if (i > -1) {
+        this.rows.splice(i, 1);
+      }
     },
   };
 }

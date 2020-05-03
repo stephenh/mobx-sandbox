@@ -70,6 +70,30 @@ describe("formState", () => {
     expect(a1.books.rows[0].title.value).toEqual("b1");
     expect(a1.books.rows[1].title.value).toEqual("b2");
   });
+
+  it("can remove nested values", () => {
+    const a1 = createAuthorInputState();
+    // Given we have two books
+    a1.set({
+      firstName: "a1",
+      books: [{ title: "b1" }, { title: "b2" }],
+    });
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+    // When we remove the 1st book
+    a1.books.remove(a1.books.value[0]);
+    // Then only the 2nd book is left
+    expect(a1.books.rows.length).toEqual(1);
+    expect(a1.books.rows[0].title.value).toEqual("b2");
+  });
+
+  it("can validate the nested collection directly", () => {
+    const a1 = createAuthorInputState();
+    a1.books.rules.push((b) => (b.length === 0 ? "Empty" : undefined));
+    // Given we already have a book
+    a1.set({ firstName: "a1", books: [] });
+    expect(a1.books.valid).toBeFalsy();
+    expect(a1.books.errors).toEqual(["Empty"]);
+  });
 });
 
 function createAuthorInputState() {

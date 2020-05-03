@@ -12,6 +12,7 @@ const App: React.FC = () => {
       lastName: { type: "string" },
       books: {
         type: "list",
+        rules: [(list) => list.length === 0 ? "Empty" : undefined],
         config: {
           title: { type: "string", rules: [required] },
         },
@@ -39,13 +40,14 @@ const App: React.FC = () => {
           return (
             <div key={i}>
               {i} <TextField field={row.title} />
+              <button onClick={() => formState.books.remove(row.value)}>X</button>
             </div>
           );
         })}
 
         <button onClick={() => formState.books.add({})}>Add book</button>
 
-        <div>Rows valid: {formState.books.valid.toString()}</div>
+        <div>Rows valid: {formState.books.valid.toString()} {formState.books.errors}</div>
 
         <div>form valid {formState.valid.toString()}</div>
       </header>
