@@ -3,9 +3,9 @@ import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
 import { createObjectState, FieldState, required } from "./formState";
 import { AuthorInput } from "./domain";
-import { observable } from "mobx";
 
 const App: React.FC = () => {
+  // Configure the fields/behavior for AuthorInput's fields
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
       firstName: { type: "string", rules: [required] },
@@ -20,6 +20,7 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
+    // Simulate getting the initial form state back from a server call
     formState.set({
       firstName: "a1",
       books: [{ title: "b1" }, { title: "b2" }],
@@ -32,12 +33,10 @@ const App: React.FC = () => {
         <b>Author</b>
 
         <div>
-          First Name
           <TextField field={formState.firstName} />
         </div>
 
         <div>
-          Last Name
           <TextField field={formState.lastName} />
         </div>
 
@@ -46,8 +45,7 @@ const App: React.FC = () => {
         {formState.books.rows.map((row, i) => {
           return (
             <div key={i}>
-              Title {i}
-              <TextField field={row.title} />
+              {i} <TextField field={row.title} />
             </div>
           );
         })}
@@ -67,7 +65,8 @@ function TextField(props: { field: FieldState<string | null | undefined> }) {
   // Somewhat odd: input won't update unless we use useObserver, even though our
   // parent uses `useObserver`
   return useObserver(() => (
-    <>
+    <div>
+      {field.key}
       <input
         value={field.value || ""}
         onBlur={() => field.blur()}
@@ -78,7 +77,7 @@ function TextField(props: { field: FieldState<string | null | undefined> }) {
       touched: {field.touched.toString()}
       valid: {field.valid.toString()}
       errors: {field.errors}
-    </>
+    </div>
   ));
 }
 

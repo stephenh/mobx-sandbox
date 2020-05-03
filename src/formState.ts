@@ -38,6 +38,7 @@ export const required: Rule<any> = (v: any) => (v !== undefined && v !== null &&
  */
 // TODO: How should T handle null | undefined?
 export interface FieldState<T> {
+  readonly key: string;
   value: T;
   touched: boolean;
   valid: boolean;
@@ -71,11 +72,11 @@ export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   const fieldStates = entries(config).map(([key, config]) => {
     if (config.type === "string") {
-      // @ts-ignore
-      return [key, newTextFieldState(config.rules || [])];
+      // TODO Fix as any
+      return [key, newTextFieldState(key as string, (config as any).rules || [])];
     } else if (config.type === "list") {
-      // @ts-ignore
-      return [key, newListFieldState([], config.config)];
+      // TODO Fix as any
+      return [key, newListFieldState(key as string, [], (config as any).config)];
     } else {
       throw new Error("Unsupported");
     }
@@ -102,16 +103,20 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
 
 type TextFieldConfig = { type: "string"; rules?: Rule<string | null | undefined>[] };
 
-function newTextFieldState(rules: Rule<string | null | undefined>[]): FieldState<string | null | undefined> {
+function newTextFieldState(
+  key: string,
+  rules: Rule<string | null | undefined>[],
+): FieldState<string | null | undefined> {
   return {
+    key,
     value: "",
     touched: false,
     rules,
     get valid(): boolean {
-      return this.rules.every((r) => r(this.value, "firstName") === undefined);
+      return this.rules.every((r) => r(this.value, key) === undefined);
     },
     get errors(): string[] {
-      return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
+      return this.rules.map((r) => r(this.value, key)).filter(isNotUndefined);
     },
     blur() {
       this.touched = true;
@@ -131,8 +136,10 @@ type ListFieldConfig<U> = {
   config: ObjectConfig<U>;
 };
 
-function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFieldState<U> {
+function newListFieldState<U>(key: string, rules: Rule<U>[], config: ObjectConfig<U>): ListFieldState<U> {
   return {
+    key,
+
     // Our fundamental state if actually the wrapped Us
     rows: [] as ObjectState<U>[],
 
