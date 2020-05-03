@@ -39,7 +39,7 @@ const App: React.FC = () => {
         {formState.books.rows.map((row, i) => {
           return (
             <div key={i}>
-              {i} <TextField field={row.title} />
+              Book {i} <TextField field={row.title} />
               <button onClick={() => formState.books.remove(row.value)}>X</button>
             </div>
           );
