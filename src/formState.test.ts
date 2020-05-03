@@ -55,6 +55,21 @@ describe("formState", () => {
     // And the author itself is also invalid
     expect(a1.valid).toBeFalsy();
   });
+
+  it("can add nested values", () => {
+    const a1 = createAuthorInputState();
+    // Given we already have a book
+    a1.set({
+      firstName: "a1",
+      books: [{ title: "b1" }],
+    });
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+    // When another book is added
+    a1.books.add({ title: "b2" });
+    // Then both books are visible
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+    expect(a1.books.rows[1].title.value).toEqual("b2");
+  });
 });
 
 function createAuthorInputState() {

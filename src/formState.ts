@@ -174,7 +174,6 @@ function newListFieldState<U>(rules: Rule<U>[], config: ObjectConfig<U>): ListFi
     },
 
     add(value: U): void {
-      // TODO Cover with test
       const row = createObjectState<U>(config);
       row.set(value);
       this.rows = [...this.rows, row];
