@@ -31,17 +31,10 @@ const App: React.FC = () => {
     <div className="App">
       <header className="App-header">
         <b>Author</b>
-
-        <div>
-          <TextField field={formState.firstName} />
-        </div>
-
-        <div>
-          <TextField field={formState.lastName} />
-        </div>
+        <TextField field={formState.firstName} />
+        <TextField field={formState.lastName} />
 
         <b>Books</b>
-
         {formState.books.rows.map((row, i) => {
           return (
             <div key={i}>
