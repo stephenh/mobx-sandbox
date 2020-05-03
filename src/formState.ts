@@ -137,7 +137,7 @@ type ListFieldConfig<U> = {
   config: ObjectConfig<U>;
 };
 
-function newListFieldState<U>(key: string, rules: Rule<U>[], config: ObjectConfig<U>): ListFieldState<U> {
+function newListFieldState<U>(key: string, rules: Rule<U[]>[], config: ObjectConfig<U>): ListFieldState<U> {
   return {
     key,
 
@@ -152,8 +152,7 @@ function newListFieldState<U>(key: string, rules: Rule<U>[], config: ObjectConfi
     // TODO Should this be true when all rows are touched?
     touched: false,
 
-    // TODO Fix this as any
-    rules: rules as any,
+    rules,
 
     get valid(): boolean {
       const value = this.value;
