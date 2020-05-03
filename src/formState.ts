@@ -92,8 +92,7 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
       fieldNames.forEach((name) => {
-        // TODO cover value being undefined in a test
-        if (value && name in value) {
+        if (name in value) {
           (this as any)[name].set((value as any)[name]);
         }
       });
