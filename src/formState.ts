@@ -16,8 +16,13 @@
  * ```
  */
 export type ObjectState<T> = FieldStates<T> & {
+  /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   valid: boolean;
+
+  /** The current value as the given DTO/GraphQL/wire type `T`. */
   value: T;
+
+  /** Sets the state of fields in `state`. */
   set(state: Partial<T>): void;
 };
 
