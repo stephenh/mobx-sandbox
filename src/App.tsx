@@ -21,6 +21,16 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
+    // Add cross-field rules
+    const firstLastRule = () => {
+      if (formState.firstName.value === formState.lastName.value) {
+        return "Last name cannot equal first name"
+      }
+    }
+    formState.lastName.rules.push(firstLastRule);
+  }, [formState]);
+
+  useEffect(() => {
     // Simulate getting the initial form state back from a server call
     formState.set({
       firstName: "a1",
