@@ -15,6 +15,8 @@
  *       - title: FieldState
  * ```
  */
+import { observable } from "mobx";
+
 export type ObjectState<T> = FieldStates<T> & {
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   valid: boolean;
@@ -26,13 +28,15 @@ export type ObjectState<T> = FieldStates<T> & {
   set(state: Partial<T>): void;
 };
 
-type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? ListFieldState<U> : FieldState<T[P]> };
+type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? ListFieldState<T, U> : FieldState<T, T[P]> };
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
-export type Rule<T> = (value: T, name: string) => string | undefined;
+export type Rule<T, V> = (value: V, key: string, object: ObjectState<T>) => string | undefined;
 
 /** A rule that validates `value` is not `undefined`, `null`, or empty string. */
-export const required: Rule<any> = (v: any) => (v !== undefined && v !== null && v !== "" ? undefined : "Required");
+export function required<T, V>(v: V): string | undefined {
+  return v !== undefined && v !== null && (v as any) !== "" ? undefined : "Required";
+}
 
 /**
  * The current state of a field in the form, i.e. it's value but also touched/validation/etc. state.
@@ -42,19 +46,19 @@ export const required: Rule<any> = (v: any) => (v !== undefined && v !== null &&
  * an mbox `useLocalStore`/observable.
  */
 // TODO: How should T handle null | undefined?
-export interface FieldState<T> {
+export interface FieldState<T, V> {
   readonly key: string;
-  value: T;
+  value: V;
   touched: boolean;
   valid: boolean;
-  rules: Rule<T>[];
+  rules: Rule<T, V>[];
   errors: string[];
   blur(): void;
-  set(value: T): void;
+  set(value: V): void;
 }
 
 /** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
-interface ListFieldState<U> extends FieldState<U[]> {
+interface ListFieldState<T, U> extends FieldState<T, U[]> {
   rows: Array<ObjectState<U>>;
   add(value: U): void;
   remove(value: U): void;
@@ -62,7 +66,7 @@ interface ListFieldState<U> extends FieldState<U[]> {
 
 /** Config rules for each field in `T` that we're editing in a form. */
 type ObjectConfig<T> = {
-  [P in keyof T]: T[P] extends Array<infer U> ? ListFieldConfig<U> : TextFieldConfig;
+  [P in keyof T]: T[P] extends Array<infer U> ? ListFieldConfig<T, U> : TextFieldConfig<T>;
 };
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
@@ -88,7 +92,7 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     }
   });
   const fieldNames = Object.keys(config);
-  return {
+  const obj = {
     ...Object.fromEntries(fieldStates),
 
     get valid(): boolean {
@@ -105,24 +109,30 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       });
     },
   } as ObjectState<T>;
+  // Push the parent pointer into each field
+  const o = observable(obj);
+  fieldNames.forEach((key) => {
+    (o as any)[key].parent = o;
+  });
+  return o;
 }
 
-type TextFieldConfig = { type: "string"; rules?: Rule<string | null | undefined>[] };
+type TextFieldConfig<T> = { type: "string"; rules?: Rule<T, string | null | undefined>[] };
 
-function newTextFieldState(
+function newTextFieldState<T>(
   key: string,
-  rules: Rule<string | null | undefined>[],
-): FieldState<string | null | undefined> {
+  rules: Rule<T, string | null | undefined>[],
+): FieldState<T, string | null | undefined> {
   return {
     key,
     value: "",
     touched: false,
     rules,
     get valid(): boolean {
-      return this.rules.every((r) => r(this.value, key) === undefined);
+      return this.rules.every((r) => r(this.value, key, (this as any).parent) === undefined);
     },
     get errors(): string[] {
-      return this.rules.map((r) => r(this.value, key)).filter(isNotUndefined);
+      return this.rules.map((r) => r(this.value, key, (this as any).parent)).filter(isNotUndefined);
     },
     blur() {
       this.touched = true;
@@ -134,15 +144,15 @@ function newTextFieldState(
 }
 
 /** Config for a list of children, i.e. `U` is `Book` in a form with `books: Book[]`. */
-type ListFieldConfig<U> = {
+type ListFieldConfig<T, U> = {
   type: "list";
   /** Rules that can run on the full list of children. */
-  rules?: Rule<U[]>[];
+  rules?: Rule<T, U[]>[];
   /** Config for each child's form state, i.e. each book. */
   config: ObjectConfig<U>;
 };
 
-function newListFieldState<U>(key: string, rules: Rule<U[]>[], config: ObjectConfig<U>): ListFieldState<U> {
+function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
   return {
     key,
 
@@ -161,13 +171,13 @@ function newListFieldState<U>(key: string, rules: Rule<U[]>[], config: ObjectCon
 
     get valid(): boolean {
       const value = this.value;
-      const collectionValid = this.rules.every((r) => r(value, key) === undefined);
+      const collectionValid = this.rules.every((r) => r(value, key, (this as any).parent) === undefined);
       const entriesValid = this.rows.every((r) => r.valid);
       return collectionValid && entriesValid;
     },
 
     get errors(): string[] {
-      return this.rules.map((r) => r(this.value, "firstName")).filter(isNotUndefined);
+      return this.rules.map((r) => r(this.value, key, (this as any).parent)).filter(isNotUndefined);
     },
 
     // TODO Set touched on all rows

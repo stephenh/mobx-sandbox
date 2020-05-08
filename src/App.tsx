@@ -9,26 +9,23 @@ const App: React.FC = () => {
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
       firstName: { type: "string", rules: [required] },
-      lastName: { type: "string" },
+      lastName: {
+        type: "string",
+        rules: [
+          (v, k, o) => {
+            return o.firstName.value === o.lastName.value ? "Last name cannot equal first name" : undefined;
+          },
+        ],
+      },
       books: {
         type: "list",
-        rules: [(list) => list.length === 0 ? "Empty" : undefined],
+        rules: [(list) => (list.length === 0 ? "Empty" : undefined)],
         config: {
           title: { type: "string", rules: [required] },
         },
       },
     }),
   );
-
-  useEffect(() => {
-    // Add cross-field rules
-    formState.lastName.rules.push(() => {
-      const { firstName, lastName } = formState;
-      if (firstName.value === lastName.value) {
-        return "Last name cannot equal first name"
-      }
-    });
-  }, [formState]);
 
   useEffect(() => {
     // Simulate getting the initial form state back from a server call
@@ -57,7 +54,9 @@ const App: React.FC = () => {
 
         <button onClick={() => formState.books.add({})}>Add book</button>
 
-        <div>Rows valid: {formState.books.valid.toString()} {formState.books.errors}</div>
+        <div>
+          Rows valid: {formState.books.valid.toString()} {formState.books.errors}
+        </div>
 
         <div>form valid {formState.valid.toString()}</div>
       </header>
@@ -65,7 +64,7 @@ const App: React.FC = () => {
   ));
 };
 
-function TextField(props: { field: FieldState<string | null | undefined> }) {
+function TextField(props: { field: FieldState<any, string | null | undefined> }) {
   const field = props.field;
   // Somewhat odd: input won't update unless we use useObserver, even though our
   // parent uses `useObserver`

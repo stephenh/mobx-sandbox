@@ -94,6 +94,28 @@ describe("formState", () => {
     expect(a1.books.valid).toBeFalsy();
     expect(a1.books.errors).toEqual(["Empty"]);
   });
+
+  it("can validate across fields", () => {
+    const a = observable(
+      createObjectState<Omit<AuthorInput, "books">>({
+        firstName: { type: "string", rules: [] },
+        lastName: {
+          type: "string",
+          rules: [
+            (v, k, o) => {
+              return o.firstName.value === o.lastName.value ? "Last name cannot be first name" : undefined;
+            },
+          ],
+        },
+      }),
+    );
+    a.firstName.value = "b1";
+    expect(a.firstName.valid).toBeTruthy();
+    expect(a.lastName.valid).toBeTruthy();
+    a.lastName.value = "b1";
+    expect(a.firstName.valid).toBeTruthy();
+    expect(a.lastName.errors).toEqual(["Last name cannot be first name"]);
+  });
 });
 
 function createAuthorInputState() {
