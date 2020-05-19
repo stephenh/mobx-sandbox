@@ -124,10 +124,10 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
 /** Field configuration for primitive values, i.e. strings/numbers/Dates/user-defined types. */
 type ValueFieldConfig<T, V> = { type: "value"; rules?: Rule<T, V | null | undefined>[] };
 
-function newValueFieldState<T>(
+function newValueFieldState<T, V>(
   key: string,
-  rules: Rule<T, string | null | undefined>[],
-): FieldState<T, string | null | undefined> {
+  rules: Rule<T, V | null | undefined>[],
+): FieldState<T, V | null | undefined> {
   return {
     key,
     value: undefined,
@@ -142,7 +142,7 @@ function newValueFieldState<T>(
     blur() {
       this.touched = true;
     },
-    set(v: string) {
+    set(v: V | null | undefined) {
       this.value = v;
     },
   };
