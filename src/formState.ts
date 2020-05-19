@@ -1,5 +1,15 @@
+import { observable } from "mobx";
+
 /**
- * Wraps a given input/DTO `T` for editing in a form.
+ * Wraps a given input/on-the-wire type `T` for editing in a form.
+ *
+ * We basically mimick every field in `T` (i.e. `firstName`, `lastName`, etc.) but decorate them
+ * with form-specific state like `touched`, `dirty`, `errors`, etc.
+ *
+ * The intent is that, after ensuring all fields are `valid`/etc., callers can take the
+ * result of this `objectState.value` and have exactly the on-the-wire type `T` that they
+ * need to submit to the backend, without doing the manual mapping of "data that was in the
+ * form controls" into "data that the backend wants".
  *
  * Note that this can be hierarchical by having by having a field of `ListFieldState` that
  * themselves each wrap an `ObjectState`, i.e.:
@@ -15,8 +25,7 @@
  *       - title: FieldState
  * ```
  */
-import { observable } from "mobx";
-
+// TODO Maybe rename to FormObjectState
 export type ObjectState<T> = FieldStates<T> & {
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   valid: boolean;
@@ -28,6 +37,7 @@ export type ObjectState<T> = FieldStates<T> & {
   set(state: Partial<T>): void;
 };
 
+/** For a given input type `T`, decorate each field into the "field state" type that holds our form-relevant state, i.e. valid/touched/etc. */
 type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> | null | undefined ? ListFieldState<T, U> : FieldState<T, T[P]> };
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
@@ -39,7 +49,7 @@ export function required<T, V>(v: V): string | undefined {
 }
 
 /**
- * The current state of a field in the form, i.e. it's value but also touched/validation/etc. state.
+ * Form state for a primitive field in the form, i.e. its value but also touched/validation/etc. state.
  *
  * This API also provides hooks for form elements to call into, i.e. `blur()` and `set(...)` that will
  * update the field state and re-render, i.e. when including in an `ObjectState`-typed literal that is
@@ -67,10 +77,26 @@ interface ListFieldState<T, U> extends FieldState<T, U[]> {
 /**
  * Config rules for each field in `T` that we're editing in a form.
  *
- * Basically every field is either a value/primitive or a list.
+ * Basically every field is either a value/primitive or a list, and this `ObjectConfig` lets
+ * the caller define field-specific behavior, i.e. validation rules.
  */
 type ObjectConfig<T> = {
   [P in keyof T]: T[P] extends Array<infer U> | null | undefined ? ListFieldConfig<T, U> : ValueFieldConfig<T, T[P]>;
+};
+
+/** Field configuration for primitive values, i.e. strings/numbers/Dates/user-defined types. */
+type ValueFieldConfig<T, V> = {
+  type: "value";
+  rules?: Rule<T, V | null | undefined>[];
+};
+
+/** Field configuration for list values, i.e. `U` is `Book` in a form with `books: Book[]`. */
+type ListFieldConfig<T, U> = {
+  type: "list";
+  /** Rules that can run on the full list of children. */
+  rules?: Rule<T, U[]>[];
+  /** Config for each child's form state, i.e. each book. */
+  config: ObjectConfig<U>;
 };
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
@@ -121,9 +147,6 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   return o;
 }
 
-/** Field configuration for primitive values, i.e. strings/numbers/Dates/user-defined types. */
-type ValueFieldConfig<T, V> = { type: "value"; rules?: Rule<T, V | null | undefined>[] };
-
 function newValueFieldState<T, V>(
   key: string,
   rules: Rule<T, V | null | undefined>[],
@@ -147,15 +170,6 @@ function newValueFieldState<T, V>(
     },
   };
 }
-
-/** Config for a list of children, i.e. `U` is `Book` in a form with `books: Book[]`. */
-type ListFieldConfig<T, U> = {
-  type: "list";
-  /** Rules that can run on the full list of children. */
-  rules?: Rule<T, U[]>[];
-  /** Config for each child's form state, i.e. each book. */
-  config: ObjectConfig<U>;
-};
 
 function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
   return {
