@@ -2,11 +2,14 @@ import { createObjectState, required } from "./formState";
 import { observable } from "mobx";
 import { AuthorInput, BookInput } from "./domain";
 
+const jan1 = new Date(2020, 0, 1);
+const jan2 = new Date(2020, 0, 2);
+
 describe("formState", () => {
   it("can create a simple object", () => {
     const a = observable(
       createObjectState<BookInput>({
-        title: { type: "string", rules: [required] },
+        title: { type: "value", rules: [required] },
       }),
     );
     expect(a.valid).toBeFalsy();
@@ -15,7 +18,7 @@ describe("formState", () => {
   it("can validate a simple input", () => {
     const a = observable(
       createObjectState<BookInput>({
-        title: { type: "string" },
+        title: { type: "value" },
       }),
     );
     a.title.value = "b1";
@@ -25,11 +28,27 @@ describe("formState", () => {
   it("can set values", () => {
     const a = observable(
       createObjectState<BookInput>({
-        title: { type: "string" },
+        title: { type: "value" },
       }),
     );
     a.set({ title: "b1" });
     expect(a.title.value).toEqual("b1");
+  });
+
+  it("can set dates", () => {
+    const a = observable(
+      createObjectState<AuthorInput>({
+        birthday: {
+          type: "value",
+          rules: [(value) => value?.getTime() === jan2.getTime() ? "cannot be born on jan2" : undefined]
+        },
+      }),
+    );
+    a.set({ birthday: jan1 });
+    expect(a.birthday.value).toEqual(jan1);
+
+    a.birthday.set(jan2);
+    expect(a.birthday.errors).toEqual(["cannot be born on jan2"]);
   });
 
   it("can set nested values", () => {
@@ -98,9 +117,9 @@ describe("formState", () => {
   it("can validate across fields", () => {
     const a = observable(
       createObjectState<Omit<AuthorInput, "books">>({
-        firstName: { type: "string", rules: [] },
+        firstName: { type: "value", rules: [] },
         lastName: {
-          type: "string",
+          type: "value",
           rules: [
             (v, k, o) => {
               return o.firstName.value === o.lastName.value ? "Last name cannot be first name" : undefined;
@@ -121,12 +140,12 @@ describe("formState", () => {
 function createAuthorInputState() {
   return observable(
     createObjectState<AuthorInput>({
-      firstName: { type: "string" },
-      lastName: { type: "string" },
+      firstName: { type: "value" },
+      lastName: { type: "value" },
       books: {
         type: "list",
         config: {
-          title: { type: "string", rules: [required] },
+          title: { type: "value", rules: [required] },
         },
       },
     }),

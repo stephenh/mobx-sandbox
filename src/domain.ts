@@ -5,6 +5,7 @@
 export interface AuthorInput {
   firstName?: string | null | undefined;
   lastName?: string | null | undefined;
+  birthday?: Date | null | undefined;
   books?: BookInput[] | null;
 }
 

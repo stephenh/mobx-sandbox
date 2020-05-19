@@ -8,9 +8,9 @@ const App: React.FC = () => {
   // Configure the fields/behavior for AuthorInput's fields
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
-      firstName: { type: "string", rules: [required] },
+      firstName: { type: "value", rules: [required] },
       lastName: {
-        type: "string",
+        type: "value",
         rules: [
           (v, k, o) => {
             return o.firstName.value === o.lastName.value ? "Last name cannot equal first name" : undefined;
@@ -21,7 +21,7 @@ const App: React.FC = () => {
         type: "list",
         rules: [(list) => (list.length === 0 ? "Empty" : undefined)],
         config: {
-          title: { type: "string", rules: [required] },
+          title: { type: "value", rules: [required] },
         },
       },
     }),

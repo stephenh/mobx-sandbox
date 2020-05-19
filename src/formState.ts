@@ -64,9 +64,13 @@ interface ListFieldState<T, U> extends FieldState<T, U[]> {
   remove(value: U): void;
 }
 
-/** Config rules for each field in `T` that we're editing in a form. */
+/**
+ * Config rules for each field in `T` that we're editing in a form.
+ *
+ * Basically every field is either a value/primitive or a list.
+ */
 type ObjectConfig<T> = {
-  [P in keyof T]: T[P] extends Array<infer U> | null | undefined ? ListFieldConfig<T, U> : TextFieldConfig<T>;
+  [P in keyof T]: T[P] extends Array<infer U> | null | undefined ? ListFieldConfig<T, U> : ValueFieldConfig<T, T[P]>;
 };
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
@@ -81,9 +85,9 @@ export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
  */
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   const fieldStates = entries(config).map(([key, config]) => {
-    if (config.type === "string") {
+    if (config.type === "value") {
       // TODO Fix as any
-      return [key, newTextFieldState(key as string, (config as any).rules || [])];
+      return [key, newValueFieldState(key as string, (config as any).rules || [])];
     } else if (config.type === "list") {
       // TODO Fix as any
       return [key, newListFieldState(key as string, (config as any).rules || [], (config as any).config)];
@@ -117,15 +121,16 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   return o;
 }
 
-type TextFieldConfig<T> = { type: "string"; rules?: Rule<T, string | null | undefined>[] };
+/** Field configuration for primitive values, i.e. strings/numbers/Dates/user-defined types. */
+type ValueFieldConfig<T, V> = { type: "value"; rules?: Rule<T, V | null | undefined>[] };
 
-function newTextFieldState<T>(
+function newValueFieldState<T>(
   key: string,
   rules: Rule<T, string | null | undefined>[],
 ): FieldState<T, string | null | undefined> {
   return {
     key,
-    value: "",
+    value: undefined,
     touched: false,
     rules,
     get valid(): boolean {
