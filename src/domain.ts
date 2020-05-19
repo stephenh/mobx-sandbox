@@ -5,7 +5,7 @@
 export interface AuthorInput {
   firstName?: string | null | undefined;
   lastName?: string | null | undefined;
-  books: BookInput[];
+  books?: BookInput[] | null;
 }
 
 export interface BookInput {

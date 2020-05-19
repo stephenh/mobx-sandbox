@@ -43,7 +43,7 @@ const App: React.FC = () => {
         <TextField field={formState.lastName} />
 
         <b>Books</b>
-        {formState.books.rows.map((row, i) => {
+        {formState.books.rows?.map((row, i) => {
           return (
             <div key={i}>
               Book {i} <TextField field={row.title} />

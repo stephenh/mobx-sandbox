@@ -28,7 +28,7 @@ export type ObjectState<T> = FieldStates<T> & {
   set(state: Partial<T>): void;
 };
 
-type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> ? ListFieldState<T, U> : FieldState<T, T[P]> };
+type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> | null | undefined ? ListFieldState<T, U> : FieldState<T, T[P]> };
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
 export type Rule<T, V> = (value: V, key: string, object: ObjectState<T>) => string | undefined;
@@ -66,7 +66,7 @@ interface ListFieldState<T, U> extends FieldState<T, U[]> {
 
 /** Config rules for each field in `T` that we're editing in a form. */
 type ObjectConfig<T> = {
-  [P in keyof T]: T[P] extends Array<infer U> ? ListFieldConfig<T, U> : TextFieldConfig<T>;
+  [P in keyof T]: T[P] extends Array<infer U> | null | undefined ? ListFieldConfig<T, U> : TextFieldConfig<T>;
 };
 
 // See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
