@@ -1,6 +1,6 @@
-import { createObjectState, required } from "./formState";
 import { observable } from "mobx";
 import { AuthorInput, BookInput } from "./domain";
+import { createObjectState, required } from "./formState";
 
 const jan1 = new Date(2020, 0, 1);
 const jan2 = new Date(2020, 0, 2);
@@ -70,6 +70,22 @@ describe("formState", () => {
     expect(a1.books.rows[0].title.value).toEqual("b1");
   });
 
+  it("maintains object identity", () => {
+    const state = createAuthorInputState();
+    const a1: AuthorInput = { firstName: "a1" };
+    state.set(a1);
+    state.firstName.set("a2");
+    expect(a1.firstName).toEqual("a2");
+  });
+
+  it("maintains object identity of lists", () => {
+    const state = createAuthorInputState();
+    const a1: AuthorInput = { firstName: "a1", books: [ { title: "t1" }]};
+    state.set(a1);
+    state.books.add({ title: "t2" });
+    expect(a1.books?.length).toEqual(2);
+  });
+
   it("list field valid is based on nested fields", () => {
     // Given an author that is initially valid
     const a1 = createAuthorInputState();
@@ -137,6 +153,21 @@ describe("formState", () => {
     expect(a1.books.rows[0].title.value).toEqual("b1");
     // When we remove the 2nd book
     a1.books.remove(1);
+    // Then only the 1st book is left
+    expect(a1.books.rows.length).toEqual(1);
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+  });
+
+  it("can remove non-first nested values by identity", () => {
+    const a1 = createAuthorInputState();
+    // Given we have two books
+    a1.set({
+      firstName: "a1",
+      books: [{ title: "b1" }, { title: "b2" }],
+    });
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+    // When we remove the 2nd book
+    a1.books.remove(a1.books.value[1]);
     // Then only the 1st book is left
     expect(a1.books.rows.length).toEqual(1);
     expect(a1.books.rows[0].title.value).toEqual("b1");

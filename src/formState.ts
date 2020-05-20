@@ -71,7 +71,7 @@ export interface FieldState<T, V> {
 interface ListFieldState<T, U> extends FieldState<T, U[]> {
   rows: Array<ObjectState<U>>;
   add(value: U): void;
-  remove(index: number): void;
+  remove(indexOrValue: number | U): void;
 }
 
 /**
@@ -122,6 +122,11 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     }
   });
   const fieldNames = Object.keys(config);
+
+  // Store a reference to the persistent identity of the object we're editing
+  let initialized = false;
+  let _value = {};
+
   const obj = {
     ...Object.fromEntries(fieldStates),
 
@@ -131,13 +136,15 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
     },
 
     get value() {
-      return Object.fromEntries(fieldNames.map(fieldName => {
-        return [fieldName, (this as any)[fieldName].value];
-      }));
+      return _value;
     },
 
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
+      if (!initialized) {
+         _value = value;
+        initialized = true;
+      }
       fieldNames.forEach((name) => {
         if (name in value) {
           (this as any)[name].set((value as any)[name]);
@@ -159,9 +166,14 @@ function newValueFieldState<T, V>(
 ): FieldState<T, V | null | undefined> {
   return {
     key,
-    value: undefined,
     touched: false,
     rules,
+    get value(): V {
+      return (this as any).parent.value?.[key];
+    },
+    set value(v: V) {
+      this.set(v);
+    },
     get valid(): boolean {
       return this.rules.every((r) => r(this.value, key, (this as any).parent) === undefined);
     },
@@ -172,21 +184,38 @@ function newValueFieldState<T, V>(
       this.touched = true;
     },
     set(v: V | null | undefined) {
-      this.value = v;
+      (this as any).parent.value[key] = v;
     },
   };
 }
 
 function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
+  // Keep a map of "item in the parent list" -> "that item's ObjectState"
+  const rowMap = new Map<U, ObjectState<U>>();
+
   return {
     key,
 
     // Our fundamental state of wrapped Us
-    rows: [] as ObjectState<U>[],
-
-    // And we can derive the values from the ObjectState wrappers
     get value() {
-      return this.rows.map((r) => r.value);
+      return (this as any).parent.value[key];
+    },
+
+    set value(v: U[]) {
+      this.set(v);
+    },
+
+    // And we can derive each value's ObjectState wrapper as needed from the rowMap cache
+    get rows(): ObjectState<U>[] {
+      // Could this just be rowMap.values?
+      return (this.value || []).map(child => {
+        let childState = rowMap.get(child);
+        if (!childState) {
+          childState = createObjectState<U>(config);
+          childState.set(child);
+        }
+        return childState;
+      });
     },
 
     // TODO Should this be true when all rows are touched?
@@ -211,22 +240,22 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     set(values: U[]) {
-      // TODO Should we handle values being a partial update somehow?
-      this.rows = values.map((value) => {
-        const state = createObjectState<U>(config);
-        state.set(value);
-        return state;
-      });
+      (this as any).parent.value[key] = values;
     },
 
     add(value: U): void {
-      const row = createObjectState<U>(config);
-      row.set(value);
-      this.rows = [...this.rows, row];
+      this.value.push(value);
     },
 
-    remove(index: number): void {
-      this.rows.splice(index, 1);
+    remove(indexOrValue: number | U): void {
+      if (typeof indexOrValue === "number") {
+        this.value.splice(indexOrValue, 1);
+      } else {
+        const index = this.value.findIndex(v => v === indexOrValue);
+        if (index > -1) {
+          this.value.splice(index, 1);
+        }
+      }
     },
   };
 }
