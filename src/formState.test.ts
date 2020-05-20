@@ -35,6 +35,16 @@ describe("formState", () => {
     expect(a.title.value).toEqual("b1");
   });
 
+  it("can read values", () => {
+    const a = observable(
+      createObjectState<BookInput>({
+        title: { type: "value" },
+      }),
+    );
+    a.set({ title: "b1" });
+    expect(a.value.title).toEqual("b1");
+  });
+
   it("can set dates", () => {
     const a = observable(
       createObjectState<AuthorInput>({

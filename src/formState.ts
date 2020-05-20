@@ -130,6 +130,12 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
     },
 
+    get value() {
+      return Object.fromEntries(fieldNames.map(fieldName => {
+        return [fieldName, (this as any)[fieldName].value];
+      }));
+    },
+
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
       fieldNames.forEach((name) => {
@@ -175,7 +181,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
   return {
     key,
 
-    // Our fundamental state if actually the wrapped Us
+    // Our fundamental state of wrapped Us
     rows: [] as ObjectState<U>[],
 
     // And we can derive the values from the ObjectState wrappers
