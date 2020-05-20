@@ -71,7 +71,7 @@ export interface FieldState<T, V> {
 interface ListFieldState<T, U> extends FieldState<T, U[]> {
   rows: Array<ObjectState<U>>;
   add(value: U): void;
-  remove(value: U): void;
+  remove(index: number): void;
 }
 
 /**
@@ -225,11 +225,8 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
       this.rows = [...this.rows, row];
     },
 
-    remove(value: U): void {
-      const i = this.rows.findIndex((r) => r.value === value);
-      if (i > -1) {
-        this.rows.splice(i, 1);
-      }
+    remove(index: number): void {
+      this.rows.splice(index, 1);
     },
   };
 }

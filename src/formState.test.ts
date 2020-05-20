@@ -100,6 +100,18 @@ describe("formState", () => {
     expect(a1.books.rows[1].title.value).toEqual("b2");
   });
 
+  it("can access nested values", () => {
+    const a1 = createAuthorInputState();
+    // Given we have two books
+    a1.set({
+      firstName: "a1",
+      books: [{ title: "b1" }, { title: "b2" }],
+    });
+    // We can see what each book looks like
+    expect(a1.books.value[0].title).toEqual("b1");
+    expect(a1.books.value[1].title).toEqual("b2");
+  });
+
   it("can remove nested values", () => {
     const a1 = createAuthorInputState();
     // Given we have two books
@@ -109,10 +121,25 @@ describe("formState", () => {
     });
     expect(a1.books.rows[0].title.value).toEqual("b1");
     // When we remove the 1st book
-    a1.books.remove(a1.books.value[0]);
+    a1.books.remove(0);
     // Then only the 2nd book is left
     expect(a1.books.rows.length).toEqual(1);
     expect(a1.books.rows[0].title.value).toEqual("b2");
+  });
+
+  it("can remove non-first nested values", () => {
+    const a1 = createAuthorInputState();
+    // Given we have two books
+    a1.set({
+      firstName: "a1",
+      books: [{ title: "b1" }, { title: "b2" }],
+    });
+    expect(a1.books.rows[0].title.value).toEqual("b1");
+    // When we remove the 2nd book
+    a1.books.remove(1);
+    // Then only the 1st book is left
+    expect(a1.books.rows.length).toEqual(1);
+    expect(a1.books.rows[0].title.value).toEqual("b1");
   });
 
   it("can validate the nested collection directly", () => {
