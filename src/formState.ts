@@ -367,7 +367,6 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     // Every time our value changes, update the original/non-proxy list
-    // @ts-ignore private
     autorun() {
       // Read rows before returning so we're reactive
       const rows = this.rows;
@@ -383,7 +382,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
       const instances = rows.map((row) => row.originalInstance);
       originalList.push(...instances);
     },
-  };
+  } as ListFieldState<T, U>;
 }
 
 function isNotUndefined<T>(value: T | undefined): value is T {
