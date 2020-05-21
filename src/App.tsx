@@ -19,7 +19,7 @@ const App: React.FC = () => {
       },
       books: {
         type: "list",
-        rules: [(list) => (list.length === 0 ? "Empty" : undefined)],
+        rules: [(list) => ((list || []).length === 0 ? "Empty" : undefined)],
         config: {
           title: { type: "value", rules: [required] },
         },

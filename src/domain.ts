@@ -3,6 +3,7 @@
 // plus the author's books.
 
 export interface AuthorInput {
+  id?: string | null | undefined;
   firstName?: string | null | undefined;
   lastName?: string | null | undefined;
   birthday?: Date | null | undefined;
@@ -10,5 +11,6 @@ export interface AuthorInput {
 }
 
 export interface BookInput {
+  id?: string | null | undefined;
   title?: string | null | undefined;
 }

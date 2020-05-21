@@ -1,4 +1,4 @@
-import { observable } from "mobx";
+import { autorun, observable } from "mobx";
 import { AuthorInput, BookInput } from "./domain";
 import { createObjectState, required } from "./formState";
 
@@ -21,7 +21,7 @@ describe("formState", () => {
         title: { type: "value" },
       }),
     );
-    a.title.value = "b1";
+    a.set({ title: "b1" });
     expect(a.valid).toBeTruthy();
   });
 
@@ -50,7 +50,7 @@ describe("formState", () => {
       createObjectState<AuthorInput>({
         birthday: {
           type: "value",
-          rules: [(value) => value?.getTime() === jan2.getTime() ? "cannot be born on jan2" : undefined]
+          rules: [(value) => (value?.getTime() === jan2.getTime() ? "cannot be born on jan2" : undefined)],
         },
       }),
     );
@@ -75,25 +75,50 @@ describe("formState", () => {
     const a1: AuthorInput = { firstName: "a1" };
     state.set(a1);
     state.firstName.set("a2");
+    expect(state.originalInstance === a1).toEqual(true);
     expect(a1.firstName).toEqual("a2");
   });
 
   it("maintains object identity of lists", () => {
     const state = createAuthorInputState();
-    const a1: AuthorInput = { firstName: "a1", books: [ { title: "t1" }]};
+    const a1: AuthorInput = { firstName: "a1", books: [{ title: "t1" }] };
     state.set(a1);
     state.books.add({ title: "t2" });
+    expect(state.originalInstance.books === a1.books).toEqual(true);
+    expect(state.books.value.length).toEqual(2);
     expect(a1.books?.length).toEqual(2);
+  });
+
+  it("maintains unknown fields", () => {
+    // Given the form is not directly editing id fields
+    const state = createObjectState<AuthorInput>({
+      firstName: { type: "value" },
+      books: { type: "list", config: { title: { type: "value" } } },
+    });
+    // And we initially have ids in the input
+    const a1: AuthorInput = { id: "1", firstName: "a1", books: [{ id: "2", title: "t1" }] };
+    state.set(a1);
+    // And we edit a few things
+    state.firstName.set("a2");
+    state.books.add({ title: "t2" });
+    // When we get back the originalInstance
+    const a2 = state.originalInstance;
+    // Then it has the ids and the new values
+    expect(a2).toMatchObject({
+      id: "1",
+      books: [{ id: "2", title: "t1" }, { title: "t2" }],
+    });
   });
 
   it("list field valid is based on nested fields", () => {
     // Given an author that is initially valid
     const a1 = createAuthorInputState();
-    a1.set({ firstName: "a1" });
+    a1.set({ firstName: "a1", books: [] });
     expect(a1.valid).toBeTruthy();
     // When an empty book is added
     a1.set({ firstName: "a1", books: [{}] });
     // Then it's title is invalid
+    expect(a1.books.rows.length).toEqual(1);
     expect(a1.books.rows[0].title.valid).toBeFalsy();
     // And the books collection itself is invalid
     expect(a1.books.valid).toBeFalsy();
@@ -196,6 +221,7 @@ describe("formState", () => {
         },
       }),
     );
+    a.set({});
     a.firstName.value = "b1";
     expect(a.firstName.valid).toBeTruthy();
     expect(a.lastName.valid).toBeTruthy();
@@ -203,19 +229,36 @@ describe("formState", () => {
     expect(a.firstName.valid).toBeTruthy();
     expect(a.lastName.errors).toEqual(["Last name cannot be first name"]);
   });
+
+  it("simple value changes trigger observers", () => {
+    const a = observable(
+      createObjectState<BookInput>({
+        title: { type: "value", rules: [required] },
+      }),
+    );
+    let lastTitle: any = undefined;
+    let ticks = 0;
+    autorun(() => {
+      lastTitle = a.title.value;
+      ticks++;
+    });
+    expect(ticks).toEqual(1);
+    expect(lastTitle).toEqual(undefined);
+    a.set({ title: "t2" });
+    expect(ticks).toEqual(2);
+    expect(lastTitle).toEqual("t2");
+  });
 });
 
 function createAuthorInputState() {
-  return observable(
-    createObjectState<AuthorInput>({
-      firstName: { type: "value" },
-      lastName: { type: "value" },
-      books: {
-        type: "list",
-        config: {
-          title: { type: "value", rules: [required] },
-        },
+  return createObjectState<AuthorInput>({
+    firstName: { type: "value" },
+    lastName: { type: "value" },
+    books: {
+      type: "list",
+      config: {
+        title: { type: "value", rules: [required] },
       },
-    }),
-  );
+    },
+  });
 }

@@ -1,4 +1,4 @@
-import { observable } from "mobx";
+import { autorun, observable } from "mobx";
 
 /**
  * Wraps a given input/on-the-wire type `T` for editing in a form.
@@ -35,10 +35,15 @@ export type ObjectState<T> = FieldStates<T> & {
 
   /** Sets the state of fields in `state`. */
   set(state: Partial<T>): void;
+
+  /** The original object passed to `set`, note this is not observable. */
+  originalInstance: T;
 };
 
 /** For a given input type `T`, decorate each field into the "field state" type that holds our form-relevant state, i.e. valid/touched/etc. */
-type FieldStates<T> = { [P in keyof T]-?: T[P] extends Array<infer U> | null | undefined ? ListFieldState<T, U> : FieldState<T, T[P]> };
+type FieldStates<T> = {
+  [P in keyof T]-?: T[P] extends Array<infer U> | null | undefined ? ListFieldState<T, U> : FieldState<T, T[P]>;
+};
 
 /** A validation rule, given the value and name, return the error string if valid, or undefined if valid. */
 export type Rule<T, V> = (value: V, key: string, object: ObjectState<T>) => string | undefined;
@@ -124,38 +129,58 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
   const fieldNames = Object.keys(config);
 
   // Store a reference to the persistent identity of the object we're editing
-  let initialized = false;
-  let _value = {};
+  let _value: T | undefined = undefined;
 
   const obj = {
     ...Object.fromEntries(fieldStates),
 
-    get valid(): boolean {
-      // TODO Not entirely sure why the typeof string is needed here
-      return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
-    },
+    // This value will become a mobx proxy of our object which mobx needs for reactivity.
+    // We separately keep the a non-proxy _value reference to the original object.
+    value: {},
 
-    get value() {
-      return _value;
+    initialized: false,
+
+    get valid(): boolean {
+      return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
     },
 
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
-      if (!initialized) {
-         _value = value;
-        initialized = true;
+      if (!(this as any).initialized) {
+        // TODO Need to figure out a way to force a one-time non-Partial initialization
+        _value = value as T;
+        this.value = value as T;
+        (this as any).initialized = true;
+      } else {
+        fieldNames.forEach((name) => {
+          if (name in value) {
+            (this as any)[name].set((value as any)[name]);
+          }
+        });
       }
-      fieldNames.forEach((name) => {
-        if (name in value) {
-          (this as any)[name].set((value as any)[name]);
-        }
-      });
+    },
+
+    // private
+    get originalInstance() {
+      if (!(this as any).initialized) {
+        throw new Error("set has not been called");
+      }
+      return _value!;
+    },
+
+    // private
+    get isInitialized() {
+      return (this as any).initialized;
     },
   } as ObjectState<T>;
   // Push the parent pointer into each field
   const o = observable(obj);
   fieldNames.forEach((key) => {
     (o as any)[key].parent = o;
+    // Let ListFieldStates auto-sync the proxy value back into original
+    if ("autorun" in (o as any)[key]) {
+      autorun(() => (o as any)[key]["autorun"]());
+    }
   });
   return o;
 }
@@ -184,7 +209,10 @@ function newValueFieldState<T, V>(
       this.touched = true;
     },
     set(v: V | null | undefined) {
+      // Set the value on our parent proxy object
       (this as any).parent.value[key] = v;
+      // And also mirror it into our original object identity
+      (this as any).parent.originalInstance[key] = v;
     },
   };
 }
@@ -198,6 +226,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
 
     // Our fundamental state of wrapped Us
     get value() {
+      // Use our parent proxy's copy of the object (itself a proxy)
       return (this as any).parent.value[key];
     },
 
@@ -208,7 +237,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     // And we can derive each value's ObjectState wrapper as needed from the rowMap cache
     get rows(): ObjectState<U>[] {
       // Could this just be rowMap.values?
-      return (this.value || []).map(child => {
+      return (this.value || []).map((child) => {
         let childState = rowMap.get(child);
         if (!childState) {
           childState = createObjectState<U>(config);
@@ -251,11 +280,26 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
       if (typeof indexOrValue === "number") {
         this.value.splice(indexOrValue, 1);
       } else {
-        const index = this.value.findIndex(v => v === indexOrValue);
+        const index = this.value.findIndex((v) => v === indexOrValue);
         if (index > -1) {
           this.value.splice(index, 1);
         }
       }
+    },
+
+    // Every time our value changes, update the original/non-proxy list
+    // @ts-ignore private
+    autorun() {
+      if (!(this as any).parent.isInitialized) {
+        return;
+      }
+      // We could do a smarter diff, but just clear and re-add everything for now
+      const originalList = (this as any).parent.originalInstance[key] as Array<any> | undefined;
+      if (originalList === undefined) {
+        return;
+      }
+      originalList.splice(0, originalList.length);
+      originalList.push(...this.rows.map(row => row.originalInstance));
     },
   };
 }
