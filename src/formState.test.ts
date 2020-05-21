@@ -94,11 +94,13 @@ describe("formState", () => {
     const b1: BookInput = { title: "t1" };
     const a1: AuthorInput = { firstName: "a1", books: [b1] };
     state.set(a1);
-    state.books.add({ title: "t2" });
+    const b2 = { title: "t2" };
+    state.books.add(b2);
     expect(state.originalInstance.books === a1.books).toEqual(true);
     expect(state.books.value.length).toEqual(2);
     expect(a1.books?.length).toEqual(2);
     expect(state.books.rows[0].originalInstance === b1).toEqual(true);
+    expect(state.books.rows[1].originalInstance === b2).toEqual(true);
   });
 
   it("maintains unknown fields", () => {

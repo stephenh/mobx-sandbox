@@ -347,7 +347,12 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     add(value: U): void {
-      this.value.push(value);
+      // This is called by the user, so value should be a non-proxy value we should keep
+      const childState = createObjectState(config);
+      childState.set(value);
+      nonProxyRowMap.set(value, childState);
+      proxyRowMap.set(childState.value, childState);
+      this.value.push(childState.value);
     },
 
     remove(indexOrValue: number | U): void {
