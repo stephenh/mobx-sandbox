@@ -65,6 +65,7 @@ export interface FieldState<T, V> {
   readonly key: string;
   value: V;
   touched: boolean;
+  dirty: boolean;
   valid: boolean;
   rules: Rule<T, V>[];
   errors: string[];
@@ -189,32 +190,51 @@ function newValueFieldState<T, V>(
   key: string,
   rules: Rule<T, V | null | undefined>[],
 ): FieldState<T, V | null | undefined> {
+  let initialized = false;
+  let _originalValue = undefined as V | null | undefined;
   return {
     key,
+
     touched: false,
+
     rules,
+
     get value(): V {
-      return (this as any).parent.value?.[key];
+      const value = (this as any).parent.value?.[key];
+      if ((this as any).parent.isInitialized && !initialized) {
+        _originalValue = value;
+        initialized = true;
+      }
+      return value;
     },
+
     set value(v: V) {
       this.set(v);
     },
+
+    get dirty(): boolean {
+      return this.value !== _originalValue;
+    },
+
     get valid(): boolean {
       return this.rules.every((r) => r(this.value, key, (this as any).parent) === undefined);
     },
+
     get errors(): string[] {
       return this.rules.map((r) => r(this.value, key, (this as any).parent)).filter(isNotUndefined);
     },
+
     blur() {
       this.touched = true;
     },
+
     set(v: V | null | undefined) {
       // Set the value on our parent proxy object
       (this as any).parent.value[key] = v;
       // And also mirror it into our original object identity
       (this as any).parent.originalInstance[key] = v;
     },
-  };
+  } as FieldState<T, V | null | undefined>;
 }
 
 function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
@@ -299,7 +319,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
         return;
       }
       originalList.splice(0, originalList.length);
-      originalList.push(...this.rows.map(row => row.originalInstance));
+      originalList.push(...this.rows.map((row) => row.originalInstance));
     },
   };
 }

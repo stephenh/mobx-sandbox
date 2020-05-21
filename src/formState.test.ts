@@ -248,6 +248,27 @@ describe("formState", () => {
     expect(ticks).toEqual(2);
     expect(lastTitle).toEqual("t2");
   });
+
+  it("knows value fields are dirty", () => {
+    const a1 = createAuthorInputState();
+    a1.set({ firstName: "a1" });
+    expect(a1.firstName.dirty).toBeFalsy();
+    a1.firstName.set("a2");
+    expect(a1.firstName.dirty).toBeTruthy();
+    a1.firstName.set("a1");
+    expect(a1.firstName.dirty).toBeFalsy();
+  });
+
+  it("knows value fields are dirty even if rendered before the initial set", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.firstName.value).toBeUndefined();
+    a1.set({ firstName: "a1" });
+    expect(a1.firstName.dirty).toBeFalsy();
+    a1.firstName.set("a2");
+    expect(a1.firstName.dirty).toBeTruthy();
+    a1.firstName.set("a1");
+    expect(a1.firstName.dirty).toBeFalsy();
+  });
 });
 
 function createAuthorInputState() {

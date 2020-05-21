@@ -79,6 +79,7 @@ function TextField(props: { field: FieldState<any, string | null | undefined> })
         }}
       />
       touched: {field.touched.toString()}
+      dirty: {field.dirty.toString()}
       valid: {field.valid.toString()}
       errors: {field.errors}
     </div>
