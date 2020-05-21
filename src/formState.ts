@@ -7,9 +7,9 @@ import { autorun, observable } from "mobx";
  * with form-specific state like `touched`, `dirty`, `errors`, etc.
  *
  * The intent is that, after ensuring all fields are `valid`/etc., callers can take the
- * result of this `objectState.value` and have exactly the on-the-wire type `T` that they
- * need to submit to the backend, without doing the manual mapping of "data that was in the
- * form controls" into "data that the backend wants".
+ * result of this `objectState.value` (or `objectState.originalValue` for the non-proxy version) and
+ * have exactly the on-the-wire type `T` that they need to submit to the backend, without doing the
+ * manual mapping of "data that was in the form controls" into "data that the backend wants".
  *
  * Note that this can be hierarchical by having by having a field of `ListFieldState` that
  * themselves each wrap an `ObjectState`, i.e.:
@@ -25,16 +25,19 @@ import { autorun, observable } from "mobx";
  *       - title: FieldState
  * ```
  */
-// TODO Maybe rename to FormObjectState
+// TODO Maybe rename to FormObjectState or ObjectFieldState
+// TODO Extend FieldState
 export type ObjectState<T> = FieldStates<T> & {
-  /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
-  valid: boolean;
-
   /** The current value as the given DTO/GraphQL/wire type `T`. */
   value: T;
 
   /** Sets the state of fields in `state`. */
   set(state: Partial<T>): void;
+
+  /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
+  valid: boolean;
+
+  dirty: boolean;
 
   /** The original object passed to `set`, note this is not observable. */
   originalInstance: T;
@@ -116,6 +119,10 @@ export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
  * individual fields as well as the top-level form/object itself.
  */
 export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
+  return newObjectState(config);
+}
+
+function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectState<T> {
   const fieldStates = entries(config).map(([key, config]) => {
     if (config.type === "value") {
       // TODO Fix as any
@@ -137,7 +144,7 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
 
     // This value will become a mobx proxy of our object which mobx needs for reactivity.
     // We separately keep the a non-proxy _value reference to the original object.
-    value: {},
+    value: existingProxy || {},
 
     initialized: false,
 
@@ -145,20 +152,26 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
     },
 
+    get dirty(): boolean {
+      return fieldNames.map((name) => (this as any)[name]).some((f) => f.dirty);
+    },
+
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
       if (!(this as any).initialized) {
         // TODO Need to figure out a way to force a one-time non-Partial initialization
+        // On the 1st set call, _value will be our non-proxy original instance
         _value = value as T;
-        this.value = value as T;
+        // Note that we skip the expected `this.value = value` assignment this will immediately
+        // deep proxy-ize everything in `value` and we want our `fieldName.set` calls to see
+        // the original values
         (this as any).initialized = true;
-      } else {
-        fieldNames.forEach((name) => {
-          if (name in value) {
-            (this as any)[name].set((value as any)[name]);
-          }
-        });
       }
+      fieldNames.forEach((name) => {
+        if (name in value) {
+          (this as any)[name].set((value as any)[name]);
+        }
+      });
     },
 
     // private
@@ -174,7 +187,9 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       return (this as any).initialized;
     },
   } as ObjectState<T>;
-  // Push the parent pointer into each field
+
+  // Push the parent observable into each child FieldState. For the child FieldStates to be able
+  // to use this and trigger reactivity, we have to do this after calling `observable`.
   const o = observable(obj);
   fieldNames.forEach((key) => {
     (o as any)[key].parent = o;
@@ -183,6 +198,7 @@ export function createObjectState<T>(config: ObjectConfig<T>): ObjectState<T> {
       autorun(() => (o as any)[key]["autorun"]());
     }
   });
+
   return o;
 }
 
@@ -200,12 +216,7 @@ function newValueFieldState<T, V>(
     rules,
 
     get value(): V {
-      const value = (this as any).parent.value?.[key];
-      if ((this as any).parent.isInitialized && !initialized) {
-        _originalValue = value;
-        initialized = true;
-      }
-      return value;
+      return (this as any).parent.value?.[key];
     },
 
     set value(v: V) {
@@ -228,11 +239,15 @@ function newValueFieldState<T, V>(
       this.touched = true;
     },
 
-    set(v: V | null | undefined) {
+    set(value: V | null | undefined) {
+      if (!initialized) {
+        _originalValue = value;
+        initialized = true;
+      }
       // Set the value on our parent proxy object
-      (this as any).parent.value[key] = v;
+      (this as any).parent.value[key] = value;
       // And also mirror it into our original object identity
-      (this as any).parent.originalInstance[key] = v;
+      (this as any).parent.originalInstance[key] = value;
     },
   } as FieldState<T, V | null | undefined>;
 }
@@ -240,13 +255,15 @@ function newValueFieldState<T, V>(
 function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
   // Keep a map of "item in the parent list" -> "that item's ObjectState"
   const rowMap = new Map<U, ObjectState<U>>();
+  let initialized = false;
+  // this is for dirty checking, not object identity
+  let originalCopy = undefined as U[] | undefined;
 
   return {
     key,
 
     // Our fundamental state of wrapped Us
     get value() {
-      // Use our parent proxy's copy of the object (itself a proxy)
       return (this as any).parent.value[key];
     },
 
@@ -254,14 +271,28 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
       this.set(v);
     },
 
+    get dirty(): boolean {
+      if (this.rows.some((r) => r.dirty)) {
+        return true;
+      }
+      if (!initialized) {
+        return false;
+      }
+      const currentList = (this as any).parent.originalInstance[key];
+      const a = (currentList || []).every((e: any) => (originalCopy || []).includes(e));
+      const b = (originalCopy || []).every((e: any) => (currentList || []).includes(e));
+      const isSame = a && b;
+      return !isSame;
+    },
+
     // And we can derive each value's ObjectState wrapper as needed from the rowMap cache
     get rows(): ObjectState<U>[] {
-      // Could this just be rowMap.values?
       return (this.value || []).map((child) => {
         let childState = rowMap.get(child);
         if (!childState) {
-          childState = createObjectState<U>(config);
+          childState = newObjectState<U>(config, child);
           childState.set(child);
+          rowMap.set(child, childState);
         }
         return childState;
       });
@@ -289,7 +320,23 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     set(values: U[]) {
-      (this as any).parent.value[key] = values;
+      if (!initialized) {
+        // We should be passed values that are non-proxies.
+        // We're going to use "does our list have the same object identity" for dirty check, so keep the original identities
+        originalCopy = [...values];
+        (this as any).parent.value[key] = values.map((v) => {
+          const childState = createObjectState(config);
+          // This should be giving our child the original non-proxy value
+          childState.set(v);
+          // Use the already-observable'd value so that our `parent.value[key] = values` doesn't re-proxy things
+          const childProxy = childState.value;
+          rowMap.set(childProxy, childState);
+          return childProxy;
+        });
+        initialized = true;
+      } else {
+        (this as any).parent.value[key] = values;
+      }
     },
 
     add(value: U): void {
@@ -310,7 +357,9 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     // Every time our value changes, update the original/non-proxy list
     // @ts-ignore private
     autorun() {
-      if (!(this as any).parent.isInitialized) {
+      // Read rows before returning so we're reactive
+      const rows = this.rows;
+      if (!initialized) {
         return;
       }
       // We could do a smarter diff, but just clear and re-add everything for now
@@ -319,7 +368,8 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
         return;
       }
       originalList.splice(0, originalList.length);
-      originalList.push(...this.rows.map((row) => row.originalInstance));
+      const instances = rows.map((row) => row.originalInstance);
+      originalList.push(...instances);
     },
   };
 }

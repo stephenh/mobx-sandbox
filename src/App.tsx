@@ -55,10 +55,13 @@ const App: React.FC = () => {
         <button onClick={() => formState.books.add({})}>Add book</button>
 
         <div>
-          Rows valid: {formState.books.valid.toString()} {formState.books.errors}
+          rows valid {formState.books.valid.toString()} dirty {formState.books.dirty.toString()}{" "}
+          {formState.books.errors}
         </div>
 
-        <div>form valid {formState.valid.toString()}</div>
+        <div>
+          form valid {formState.valid.toString()} dirty {formState.dirty.toString()}
+        </div>
       </header>
     </div>
   ));
@@ -78,10 +81,10 @@ function TextField(props: { field: FieldState<any, string | null | undefined> })
           field.set(e.target.value);
         }}
       />
-      touched: {field.touched.toString()}
-      dirty: {field.dirty.toString()}
-      valid: {field.valid.toString()}
-      errors: {field.errors}
+      touched {field.touched.toString()}
+      dirty {field.dirty.toString()}
+      valid {field.valid.toString()}
+      errors {field.errors}
     </div>
   ));
 }

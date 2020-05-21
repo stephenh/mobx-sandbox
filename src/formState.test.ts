@@ -6,6 +6,16 @@ const jan1 = new Date(2020, 0, 1);
 const jan2 = new Date(2020, 0, 2);
 
 describe("formState", () => {
+  it("mobx lists maintain observable identity", () => {
+    // given a parent observable
+    const a = observable({ list: [] as {}[] });
+    // if we observable-ize a value being pushing it on the list
+    const c1 = observable({});
+    a.list.push(c1);
+    // then we get identify equality on the list lookups
+    expect(a.list[0] === c1).toEqual(true);
+  });
+
   it("can create a simple object", () => {
     const a = observable(
       createObjectState<BookInput>({
@@ -81,12 +91,14 @@ describe("formState", () => {
 
   it("maintains object identity of lists", () => {
     const state = createAuthorInputState();
-    const a1: AuthorInput = { firstName: "a1", books: [{ title: "t1" }] };
+    const b1: BookInput = { title: "t1" };
+    const a1: AuthorInput = { firstName: "a1", books: [b1] };
     state.set(a1);
     state.books.add({ title: "t2" });
     expect(state.originalInstance.books === a1.books).toEqual(true);
     expect(state.books.value.length).toEqual(2);
     expect(a1.books?.length).toEqual(2);
+    expect(state.books.rows[0].originalInstance === b1).toEqual(true);
   });
 
   it("maintains unknown fields", () => {
@@ -183,6 +195,18 @@ describe("formState", () => {
     expect(a1.books.rows[0].title.value).toEqual("b1");
   });
 
+  it("can remove added nested values", () => {
+    const a1 = createAuthorInputState();
+    // Given we have a a single book
+    a1.set({ books: [{ title: "b1" }] });
+    // And we push a new one
+    a1.books.add({ title: "b2" });
+    // When we remove the 2nd book by the row's reference value
+    a1.books.remove(a1.books.rows[1].value);
+    // Then only the 1st book is left
+    expect(a1.books.rows.length).toEqual(1);
+  });
+
   it("can remove non-first nested values by identity", () => {
     const a1 = createAuthorInputState();
     // Given we have two books
@@ -268,6 +292,39 @@ describe("formState", () => {
     expect(a1.firstName.dirty).toBeTruthy();
     a1.firstName.set("a1");
     expect(a1.firstName.dirty).toBeFalsy();
+  });
+
+  it("knows nested value fields are dirty", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.books.value).toBeUndefined();
+    a1.set({ books: [{ title: "t1" }] });
+    expect(a1.books.rows[0].title.dirty).toBeFalsy();
+    a1.books.rows[0].title.set("t2");
+    expect(a1.books.rows[0].title.dirty).toBeTruthy();
+    a1.books.rows[0].title.set("t1");
+    expect(a1.books.rows[0].title.dirty).toBeFalsy();
+  });
+
+  it("knows list fields are dirty", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.books.dirty).toBeFalsy();
+    a1.set({ books: [] });
+    expect(a1.books.dirty).toBeFalsy();
+    a1.books.add({ title: "t2" });
+    expect(a1.books.dirty).toBeTruthy();
+    a1.books.remove(0);
+    expect(a1.dirty).toBeFalsy();
+  });
+
+  it("knows object fields are dirty", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.dirty).toBeFalsy();
+    a1.set({ firstName: "a1" });
+    expect(a1.dirty).toBeFalsy();
+    a1.firstName.set("a2");
+    expect(a1.dirty).toBeTruthy();
+    a1.firstName.set("a1");
+    expect(a1.dirty).toBeFalsy();
   });
 });
 
