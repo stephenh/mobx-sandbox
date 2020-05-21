@@ -55,12 +55,13 @@ const App: React.FC = () => {
         <button onClick={() => formState.books.add({})}>Add book</button>
 
         <div>
-          rows valid {formState.books.valid.toString()} dirty {formState.books.dirty.toString()}{" "}
-          {formState.books.errors}
+          rows touched {formState.books.touched.toString()} valid {formState.books.valid.toString()} dirty{" "}
+          {formState.books.dirty.toString()} {formState.books.errors}
         </div>
 
         <div>
-          form valid {formState.valid.toString()} dirty {formState.dirty.toString()}
+          form touched {formState.touched.toString()} valid {formState.valid.toString()} dirty{" "}
+          {formState.dirty.toString()}
         </div>
       </header>
     </div>

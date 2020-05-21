@@ -35,12 +35,14 @@ export type ObjectState<T> = FieldStates<T> & {
   set(state: Partial<T>): void;
 
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
-  valid: boolean;
+  readonly valid: boolean;
 
-  dirty: boolean;
+  readonly touched: boolean;
+
+  readonly dirty: boolean;
 
   /** The original object passed to `set`, note this is not observable. */
-  originalInstance: T;
+  readonly originalInstance: T;
 };
 
 /** For a given input type `T`, decorate each field into the "field state" type that holds our form-relevant state, i.e. valid/touched/etc. */
@@ -67,18 +69,18 @@ export function required<T, V>(v: V): string | undefined {
 export interface FieldState<T, V> {
   readonly key: string;
   value: V;
-  touched: boolean;
-  dirty: boolean;
-  valid: boolean;
+  readonly touched: boolean;
+  readonly dirty: boolean;
+  readonly valid: boolean;
   rules: Rule<T, V>[];
-  errors: string[];
+  readonly errors: string[];
   blur(): void;
   set(value: V): void;
 }
 
 /** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
 interface ListFieldState<T, U> extends FieldState<T, U[]> {
-  rows: Array<ObjectState<U>>;
+  readonly rows: ReadonlyArray<ObjectState<U>>;
   add(value: U): void;
   remove(indexOrValue: number | U): void;
 }
@@ -147,6 +149,10 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
     value: existingProxy || {},
 
     initialized: false,
+
+    get touched(): boolean {
+      return fieldNames.map((name) => (this as any)[name]).some((f) => f.touched);
+    },
 
     get valid(): boolean {
       return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
@@ -236,7 +242,8 @@ function newValueFieldState<T, V>(
     },
 
     blur() {
-      this.touched = true;
+      // touched is readonly, but we're allowed to change it
+      (this as any).touched = true;
     },
 
     set(value: V | null | undefined) {
@@ -302,7 +309,9 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     // TODO Should this be true when all rows are touched?
-    touched: false,
+    get touched() {
+      return this.rows.some((r) => r.touched);
+    },
 
     rules,
 
@@ -317,9 +326,8 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
       return this.rules.map((r) => r(this.value, key, (this as any).parent)).filter(isNotUndefined);
     },
 
-    // TODO Set touched on all rows
     blur() {
-      this.touched = true;
+      // TODO Set touched on all rows
     },
 
     set(values: U[]) {
