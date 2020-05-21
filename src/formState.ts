@@ -254,8 +254,10 @@ function newValueFieldState<T, V>(
 
 function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: ObjectConfig<U>): ListFieldState<T, U> {
   // Keep a map of "item in the parent list" -> "that item's ObjectState"
-  const rowMap = new Map<U, ObjectState<U>>();
+  const proxyRowMap = new Map<U, ObjectState<U>>();
+  const nonProxyRowMap = new Map<U, ObjectState<U>>();
   let initialized = false;
+
   // this is for dirty checking, not object identity
   let originalCopy = undefined as U[] | undefined;
 
@@ -288,11 +290,12 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     // And we can derive each value's ObjectState wrapper as needed from the rowMap cache
     get rows(): ObjectState<U>[] {
       return (this.value || []).map((child) => {
-        let childState = rowMap.get(child);
+        // Because we're reading from this.value, child will be the proxy version
+        let childState = proxyRowMap.get(child);
         if (!childState) {
           childState = newObjectState<U>(config, child);
           childState.set(child);
-          rowMap.set(child, childState);
+          proxyRowMap.set(child, childState);
         }
         return childState;
       });
@@ -321,22 +324,26 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
 
     set(values: U[]) {
       if (!initialized) {
-        // We should be passed values that are non-proxies.
-        // We're going to use "does our list have the same object identity" for dirty check, so keep the original identities
+        // On initialize, we should be passed a list of non-proxy children, which we're going to use for our
+        // "does the new/old list have the same object identity" for dirty checking, so keep a copy of these.
         originalCopy = [...values];
-        (this as any).parent.value[key] = values.map((v) => {
-          const childState = createObjectState(config);
-          // This should be giving our child the original non-proxy value
-          childState.set(v);
-          // Use the already-observable'd value so that our `parent.value[key] = values` doesn't re-proxy things
-          const childProxy = childState.value;
-          rowMap.set(childProxy, childState);
-          return childProxy;
-        });
         initialized = true;
-      } else {
-        (this as any).parent.value[key] = values;
       }
+      // We should be passed values that are non-proxies.
+      (this as any).parent.value[key] = values.map((value) => {
+        // value might be either a proxy (depending on how the user called it) or the non-proxy value (if initializing)
+        let childState = proxyRowMap.get(value) || nonProxyRowMap.get(value);
+        if (!childState) {
+          childState = createObjectState(config);
+          // This should be giving our child the original non-proxy value
+          childState.set(value);
+          // Keep a look up of non-proxy value in case the user calls the `set` method again with the non-proxy value
+          nonProxyRowMap.set(value, childState);
+          proxyRowMap.set(childState.value, childState);
+        }
+        // Return the already-observable'd value so that our `parent.value[key] = values` doesn't re-proxy things
+        return childState.value;
+      });
     },
 
     add(value: U): void {
