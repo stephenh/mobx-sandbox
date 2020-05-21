@@ -101,6 +101,7 @@ describe("formState", () => {
     expect(a1.books?.length).toEqual(2);
     expect(state.books.rows[0].originalInstance === b1).toEqual(true);
     expect(state.books.rows[1].originalInstance === b2).toEqual(true);
+    expect(a1.books![1] === b2).toEqual(true);
   });
 
   it("maintains unknown fields", () => {
