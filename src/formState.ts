@@ -374,13 +374,9 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
         return;
       }
       // We could do a smarter diff, but just clear and re-add everything for now
-      const originalList = (this as any).parent.originalInstance[key] as Array<any> | undefined;
-      if (originalList === undefined) {
-        return;
-      }
+      const originalList = (this as any).parent.originalInstance[key] as Array<any>;
       originalList.splice(0, originalList.length);
-      const instances = rows.map((row) => row.originalInstance);
-      originalList.push(...instances);
+      originalList.push(...rows.map((row) => row.originalInstance));
     },
   } as ListFieldState<T, U>;
 }
