@@ -31,7 +31,7 @@ const App: React.FC = () => {
     // Simulate getting the initial form state back from a server call
     formState.set({
       firstName: "a1",
-      books: [{ title: "b1" }, { title: "b2" }],
+      books: [...Array(2)].map((_, i) => ({ title: `b${i}` })),
     });
   }, [formState]);
 
