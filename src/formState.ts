@@ -421,7 +421,10 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     save() {
-      this.rows.every((r) => r.save());
+      this.rows.every((r) => {
+        r.save();
+        nonProxyRowMap.set(r.originalInstance, r);
+      });
       originalCopy = (this as any).parent.originalInstance[key];
     },
 
