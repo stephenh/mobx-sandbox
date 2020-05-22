@@ -1,4 +1,6 @@
-import { autorun, observable } from "mobx";
+import { autorun, observable, toJS } from "mobx";
+import isPlainObject from 'is-plain-object';
+import equal from 'fast-deep-equal';
 
 /**
  * Wraps a given input/on-the-wire type `T` for editing in a form.
@@ -241,6 +243,9 @@ function newValueFieldState<T, V>(
     },
 
     get dirty(): boolean {
+      if (isPlainObject(_originalValue)) {
+        return !equal(_originalValue, toJS(this.value));
+      }
       return this.value !== _originalValue;
     },
 

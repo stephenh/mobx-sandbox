@@ -13,4 +13,10 @@ export interface AuthorInput {
 export interface BookInput {
   id?: string | null | undefined;
   title?: string | null | undefined;
+  classification?: DeweyDecimalClassification,
+}
+
+export interface DeweyDecimalClassification {
+  number: string;
+  category: string;
 }
