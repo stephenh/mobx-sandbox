@@ -39,6 +39,9 @@ export type ObjectState<T> = FieldStates<T> & {
   /** Resets state of form fields to their original values */
   reset(): void;
 
+  /** Resets state of form fields to their original values */
+  save(): void;
+
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   readonly valid: boolean;
 
@@ -82,6 +85,7 @@ export interface FieldState<T, V> {
   blur(): void;
   set(value: V): void;
   reset(): void;
+  save(): void;
 }
 
 /** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
@@ -193,6 +197,13 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
       });
     },
 
+    // Saves all current values into _originalValue
+    save() {
+      fieldNames.forEach((name) => {
+        (this as any)[name].save();
+      });
+    },
+
     // private
     get originalInstance() {
       if (!(this as any).initialized) {
@@ -275,6 +286,14 @@ function newValueFieldState<T, V>(
 
     reset() {
       this.set(_originalValue);
+    },
+
+    save() {
+      if (isPlainObject(_originalValue)) {
+        _originalValue = toJS(this.value);
+      } else {
+        _originalValue = this.value;
+      }
     }
   } as FieldState<T, V | null | undefined>;
 }
@@ -399,6 +418,14 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
         this.set(originalCopy);
         this.rows.every((r) => r.reset());
       }
+    },
+
+    save() {
+      this.rows.every((r) => {
+        r.save();
+        nonProxyRowMap.set(r.originalInstance, r);
+      });
+      originalCopy = (this as any).parent.originalInstance[key];
     },
 
     // Every time our value changes, update the original/non-proxy list
