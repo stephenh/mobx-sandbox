@@ -1,9 +1,17 @@
 import { autorun, observable } from "mobx";
-import { AuthorInput, BookInput } from "./domain";
+import { AuthorInput, BookInput, DeweyDecimalClassification } from "./domain";
 import { createObjectState, required } from "./formState";
 
 const jan1 = new Date(2020, 0, 1);
 const jan2 = new Date(2020, 0, 2);
+const classification100: DeweyDecimalClassification = {
+  number: "100",
+  category: "Philosophy"
+};
+const classification200: DeweyDecimalClassification = {
+  number: "200",
+  category: "Religion"
+};
 
 describe("formState", () => {
   it("mobx lists maintain observable identity", () => {
@@ -330,6 +338,22 @@ describe("formState", () => {
     expect(a1.dirty).toBeFalsy();
   });
 
+  it("knows an object's field of type object is dirty", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.dirty).toBeFalsy();
+    a1.set({
+      books: [{
+        title: "b1",
+        classification: classification100
+      }]
+    });
+    expect(a1.dirty).toBeFalsy();
+    a1.books.rows[0].set({classification: classification200});
+    expect(a1.dirty).toBeTruthy();
+    a1.books.rows[0].set({classification: classification100});
+    expect(a1.dirty).toBeFalsy();
+  });
+
   it("resets values", () => {
     const a1 = createAuthorInputState();
     expect(a1.dirty).toBeFalsy();
@@ -338,8 +362,10 @@ describe("formState", () => {
       lastName: "aL1",
       books: [{
         title: "b1",
+        classification: classification100
       }]
     });
+
     expect(a1.dirty).toBeFalsy();
     a1.firstName.set("a2");
     a1.lastName.set("aL2");
@@ -363,6 +389,7 @@ function createAuthorInputState() {
       type: "list",
       config: {
         title: { type: "value", rules: [required] },
+        classification: { type: "value" },
       },
     },
   });
