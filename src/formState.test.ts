@@ -379,6 +379,43 @@ describe("formState", () => {
     expect(a1.books.rows[0].title.value).toBe("b1");
     expect(a1.dirty).toBeFalsy();
   });
+
+  it("saves values into _originalState", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.dirty).toBeFalsy();
+    a1.set({
+      firstName: "a1",
+      lastName: "aL1",
+      books: [{
+        title: "b1",
+        classification: classification100
+      }]
+    });
+
+    expect(a1.dirty).toBeFalsy();
+
+    // Now dirty things up.
+    a1.firstName.set("a2");
+    a1.lastName.set("aL2");
+    a1.books.rows[0].set({title: "b2"});
+    a1.books.add({title: "bb2"});
+
+    // verify ValueFieldState is dirty, then save, then no longer dirty.
+    expect(a1.firstName.dirty).toBeTruthy();
+    a1.firstName.save();
+    expect(a1.firstName.dirty).toBeFalsy();
+
+    // verify ListFieldState is dirty, then save, then no longer dirty.
+    expect(a1.books.dirty).toBeTruthy();
+    a1.books.save();
+    expect(a1.books.dirty).toBeFalsy();
+
+    // Verify the remaining form is still dirty
+    expect(a1.dirty).toBeTruthy();
+    a1.save();
+    // Verify after save the whole form is no longer dirty.
+    expect(a1.dirty).toBeFalsy();
+  });
 });
 
 function createAuthorInputState() {
