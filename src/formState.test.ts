@@ -329,6 +329,30 @@ describe("formState", () => {
     a1.firstName.set("a1");
     expect(a1.dirty).toBeFalsy();
   });
+
+  it("resets values", () => {
+    const a1 = createAuthorInputState();
+    expect(a1.dirty).toBeFalsy();
+    a1.set({
+      firstName: "a1",
+      lastName: "aL1",
+      books: [{
+        title: "b1",
+      }]
+    });
+    expect(a1.dirty).toBeFalsy();
+    a1.firstName.set("a2");
+    a1.lastName.set("aL2");
+    a1.books.rows[0].set({title: "b2"});
+    a1.books.add({title: "bb2"});
+    expect(a1.dirty).toBeTruthy();
+    a1.reset();
+    expect(a1.firstName.value).toBe("a1");
+    expect(a1.lastName.value).toBe("aL1");
+    expect(a1.books.rows.length).toBe(1);
+    expect(a1.books.rows[0].title.value).toBe("b1");
+    expect(a1.dirty).toBeFalsy();
+  });
 });
 
 function createAuthorInputState() {

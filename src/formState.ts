@@ -34,6 +34,9 @@ export type ObjectState<T> = FieldStates<T> & {
   /** Sets the state of fields in `state`. */
   set(state: Partial<T>): void;
 
+  /** Resets state of form fields to their original values */
+  reset(): void;
+
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   readonly valid: boolean;
 
@@ -76,6 +79,7 @@ export interface FieldState<T, V> {
   readonly errors: string[];
   blur(): void;
   set(value: V): void;
+  reset(): void;
 }
 
 /** Form state for list of children, i.e. `U` is a `Book` in a form with a `books: Book[]`. */
@@ -180,6 +184,13 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
       });
     },
 
+    // Resets all fields back to their original values
+    reset() {
+      fieldNames.forEach((name) => {
+        (this as any)[name].reset();
+      });
+    },
+
     // private
     get originalInstance() {
       if (!(this as any).initialized) {
@@ -256,6 +267,10 @@ function newValueFieldState<T, V>(
       // And also mirror it into our original object identity
       (this as any).parent.originalInstance[key] = value;
     },
+
+    reset() {
+      this.set(_originalValue);
+    }
   } as FieldState<T, V | null | undefined>;
 }
 
@@ -371,6 +386,13 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
         if (index > -1) {
           this.value.splice(index, 1);
         }
+      }
+    },
+
+    reset() {
+      if (originalCopy) {
+        this.set(originalCopy);
+        this.rows.every((r) => r.reset());
       }
     },
 
