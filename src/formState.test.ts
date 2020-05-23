@@ -363,6 +363,10 @@ describe("formState", () => {
       books: [{
         title: "b1",
         classification: classification100
+      },
+      {
+        title: "b2",
+        classification: classification100
       }]
     });
 
@@ -370,13 +374,15 @@ describe("formState", () => {
     a1.firstName.set("a2");
     a1.lastName.set("aL2");
     a1.books.rows[0].set({title: "b2"});
-    a1.books.add({title: "bb2"});
+    a1.books.rows[1].set({title: "bb2"});
+    a1.books.add({title: "b3"});
     expect(a1.dirty).toBeTruthy();
     a1.reset();
     expect(a1.firstName.value).toBe("a1");
     expect(a1.lastName.value).toBe("aL1");
-    expect(a1.books.rows.length).toBe(1);
+    expect(a1.books.rows.length).toBe(2);
     expect(a1.books.rows[0].title.value).toBe("b1");
+    expect(a1.books.rows[1].title.value).toBe("b2");
     expect(a1.dirty).toBeFalsy();
   });
 
@@ -399,6 +405,9 @@ describe("formState", () => {
     a1.lastName.set("aL2");
     a1.books.rows[0].set({title: "b2"});
     a1.books.add({title: "bb2"});
+    // Set book 2 to an different value. Ensures our save can traverse all rows
+    a1.books.rows[1].set({title: "bb3"})
+
 
     // verify ValueFieldState is dirty, then save, then no longer dirty.
     expect(a1.firstName.dirty).toBeTruthy();
