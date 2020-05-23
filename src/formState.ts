@@ -121,9 +121,6 @@ type ListFieldConfig<T, U> = {
   config: ObjectConfig<U>;
 };
 
-// See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
-export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
-
 /**
  * Creates a new `ObjectState` for a given form object `T` given config rules in `config`.
  *
@@ -169,7 +166,7 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
     },
 
     set touched(touched: boolean) {
-      getFields(this).forEach(f => f.touched = touched);
+      getFields(this).forEach((f) => (f.touched = touched));
     },
 
     get valid(): boolean {
@@ -352,7 +349,7 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     },
 
     set touched(touched: boolean) {
-      this.rows.forEach(r => r.touched = touched);
+      this.rows.forEach((r) => (r.touched = touched));
     },
 
     rules,
@@ -449,3 +446,6 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
 function isNotUndefined<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
+
+// See https://github.com/Microsoft/TypeScript/issues/21826#issuecomment-479851685
+export const entries = Object.entries as <T>(o: T) => [keyof T, T[keyof T]][];
