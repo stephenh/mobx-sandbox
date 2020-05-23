@@ -152,6 +152,10 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
   let _value: T | undefined = undefined;
   let initialized = false;
 
+  function getFields(proxyThis: any): FieldState<T, any>[] {
+    return fieldNames.map((name) => proxyThis[name]) as FieldState<T, any>[];
+  }
+
   const obj = {
     ...Object.fromEntries(fieldStates),
 
@@ -160,15 +164,15 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
     value: existingProxy || {},
 
     get touched(): boolean {
-      return fieldNames.map((name) => (this as any)[name]).some((f) => f.touched);
+      return getFields(this).some((f) => f.touched);
     },
 
     get valid(): boolean {
-      return fieldNames.map((name) => (this as any)[name]).every((f) => f.valid);
+      return getFields(this).every((f) => f.valid);
     },
 
     get dirty(): boolean {
-      return fieldNames.map((name) => (this as any)[name]).some((f) => f.dirty);
+      return getFields(this).some((f) => f.dirty);
     },
 
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
@@ -182,25 +186,21 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
         // the original values
         initialized = true;
       }
-      fieldNames.forEach((name) => {
-        if (name in value) {
-          (this as any)[name].set((value as any)[name]);
+      getFields(this).forEach((field) => {
+        if (field.key in value) {
+          field.set((value as any)[field.key]);
         }
       });
     },
 
     // Resets all fields back to their original values
     reset() {
-      fieldNames.forEach((name) => {
-        (this as any)[name].reset();
-      });
+      getFields(this).forEach((f) => f.reset());
     },
 
     // Saves all current values into _originalValue
     save() {
-      fieldNames.forEach((name) => {
-        (this as any)[name].save();
-      });
+      getFields(this).forEach((f) => f.save());
     },
 
     // private
