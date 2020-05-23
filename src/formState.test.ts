@@ -4,14 +4,8 @@ import { createObjectState, required } from "./formState";
 
 const jan1 = new Date(2020, 0, 1);
 const jan2 = new Date(2020, 0, 2);
-const classification100: DeweyDecimalClassification = {
-  number: "100",
-  category: "Philosophy"
-};
-const classification200: DeweyDecimalClassification = {
-  number: "200",
-  category: "Religion"
-};
+const dd100: DeweyDecimalClassification = { number: "100", category: "Philosophy" };
+const dd200: DeweyDecimalClassification = { number: "200", category: "Religion" };
 
 describe("formState", () => {
   it("mobx lists maintain observable identity", () => {
@@ -342,15 +336,12 @@ describe("formState", () => {
     const a1 = createAuthorInputState();
     expect(a1.dirty).toBeFalsy();
     a1.set({
-      books: [{
-        title: "b1",
-        classification: classification100
-      }]
+      books: [{ title: "b1", classification: dd100 }],
     });
     expect(a1.dirty).toBeFalsy();
-    a1.books.rows[0].set({classification: classification200});
+    a1.books.rows[0].set({ classification: dd200 });
     expect(a1.dirty).toBeTruthy();
-    a1.books.rows[0].set({classification: classification100});
+    a1.books.rows[0].set({ classification: dd100 });
     expect(a1.dirty).toBeFalsy();
   });
 
@@ -360,22 +351,18 @@ describe("formState", () => {
     a1.set({
       firstName: "a1",
       lastName: "aL1",
-      books: [{
-        title: "b1",
-        classification: classification100
-      },
-      {
-        title: "b2",
-        classification: classification100
-      }]
+      books: [
+        { title: "b1", classification: dd100 },
+        { title: "b2", classification: dd100 },
+      ],
     });
 
     expect(a1.dirty).toBeFalsy();
     a1.firstName.set("a2");
     a1.lastName.set("aL2");
-    a1.books.rows[0].set({title: "b2"});
-    a1.books.rows[1].set({title: "bb2"});
-    a1.books.add({title: "b3"});
+    a1.books.rows[0].set({ title: "b2" });
+    a1.books.rows[1].set({ title: "bb2" });
+    a1.books.add({ title: "b3" });
     expect(a1.dirty).toBeTruthy();
     a1.reset();
     expect(a1.firstName.value).toBe("a1");
@@ -392,10 +379,7 @@ describe("formState", () => {
     a1.set({
       firstName: "a1",
       lastName: "aL1",
-      books: [{
-        title: "b1",
-        classification: classification100
-      }]
+      books: [{ title: "b1", classification: dd100 }],
     });
 
     expect(a1.dirty).toBeFalsy();
@@ -403,11 +387,10 @@ describe("formState", () => {
     // Now dirty things up.
     a1.firstName.set("a2");
     a1.lastName.set("aL2");
-    a1.books.rows[0].set({title: "b2"});
-    a1.books.add({title: "bb2"});
+    a1.books.rows[0].set({ title: "b2" });
+    a1.books.add({ title: "bb2" });
     // Set book 2 to an different value. Ensures our save can traverse all rows
-    a1.books.rows[1].set({title: "bb3"})
-
+    a1.books.rows[1].set({ title: "bb3" });
 
     // verify ValueFieldState is dirty, then save, then no longer dirty.
     expect(a1.firstName.dirty).toBeTruthy();
