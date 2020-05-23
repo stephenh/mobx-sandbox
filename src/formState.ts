@@ -45,7 +45,7 @@ export type ObjectState<T> = FieldStates<T> & {
   /** Whether this object and all of it's fields (i.e. recursively for list fields) are valid. */
   readonly valid: boolean;
 
-  readonly touched: boolean;
+  touched: boolean;
 
   readonly dirty: boolean;
 
@@ -77,11 +77,12 @@ export function required<T, V>(v: V): string | undefined {
 export interface FieldState<T, V> {
   readonly key: string;
   value: V;
-  readonly touched: boolean;
+  touched: boolean;
   readonly dirty: boolean;
   readonly valid: boolean;
   rules: Rule<T, V>[];
   readonly errors: string[];
+  /** Blur essentially touches the field. */
   blur(): void;
   set(value: V): void;
   reset(): void;
@@ -165,6 +166,10 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
 
     get touched(): boolean {
       return getFields(this).some((f) => f.touched);
+    },
+
+    set touched(touched: boolean) {
+      getFields(this).forEach(f => f.touched = touched);
     },
 
     get valid(): boolean {
@@ -344,6 +349,10 @@ function newListFieldState<T, U>(key: string, rules: Rule<T, U[]>[], config: Obj
     // TODO Should this be true when all rows are touched?
     get touched() {
       return this.rows.some((r) => r.touched);
+    },
+
+    set touched(touched: boolean) {
+      this.rows.forEach(r => r.touched = touched);
     },
 
     rules,

@@ -65,6 +65,7 @@ const App: React.FC = () => {
         <div>
           form touched {formState.touched.toString()} valid {formState.valid.toString()} dirty{" "}
           {formState.dirty.toString()}
+          <button onClick={() => (formState.touched = !formState.touched)}>touch</button>
         </div>
       </header>
     </div>

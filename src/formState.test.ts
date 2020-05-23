@@ -408,6 +408,22 @@ describe("formState", () => {
     // Verify after save the whole form is no longer dirty.
     expect(a1.dirty).toBeFalsy();
   });
+
+  it("can touch everything at once", () => {
+    const a1 = createAuthorInputState();
+    a1.set({ firstName: "a1", books: [{ title: "b1" }] });
+
+    expect(a1.firstName.touched).toBeFalsy();
+    expect(a1.books.touched).toBeFalsy();
+    expect(a1.books.rows[0].title.touched).toBeFalsy();
+    expect(a1.touched).toBeFalsy();
+
+    a1.touched = true;
+    expect(a1.firstName.touched).toBeTruthy();
+    expect(a1.books.touched).toBeTruthy();
+    expect(a1.books.rows[0].title.touched).toBeTruthy();
+    expect(a1.touched).toBeTruthy();
+  });
 });
 
 function createAuthorInputState() {
