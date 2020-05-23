@@ -1,6 +1,6 @@
 import { autorun, observable, toJS } from "mobx";
-import isPlainObject from 'is-plain-object';
-import equal from 'fast-deep-equal';
+import isPlainObject from "is-plain-object";
+import equal from "fast-deep-equal";
 
 /**
  * Wraps a given input/on-the-wire type `T` for editing in a form.
@@ -150,6 +150,7 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
 
   // Store a reference to the persistent identity of the object we're editing
   let _value: T | undefined = undefined;
+  let initialized = false;
 
   const obj = {
     ...Object.fromEntries(fieldStates),
@@ -157,8 +158,6 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
     // This value will become a mobx proxy of our object which mobx needs for reactivity.
     // We separately keep the a non-proxy _value reference to the original object.
     value: existingProxy || {},
-
-    initialized: false,
 
     get touched(): boolean {
       return fieldNames.map((name) => (this as any)[name]).some((f) => f.touched);
@@ -174,14 +173,14 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
 
     // Accepts new values in bulk, i.e. when setting the form initial state from the backend.
     set(value) {
-      if (!(this as any).initialized) {
+      if (!initialized) {
         // TODO Need to figure out a way to force a one-time non-Partial initialization
         // On the 1st set call, _value will be our non-proxy original instance
         _value = value as T;
         // Note that we skip the expected `this.value = value` assignment this will immediately
         // deep proxy-ize everything in `value` and we want our `fieldName.set` calls to see
         // the original values
-        (this as any).initialized = true;
+        initialized = true;
       }
       fieldNames.forEach((name) => {
         if (name in value) {
@@ -206,15 +205,10 @@ function newObjectState<T>(config: ObjectConfig<T>, existingProxy?: T): ObjectSt
 
     // private
     get originalInstance() {
-      if (!(this as any).initialized) {
+      if (!initialized) {
         throw new Error("set has not been called");
       }
       return _value!;
-    },
-
-    // private
-    get isInitialized() {
-      return (this as any).initialized;
     },
   } as ObjectState<T>;
 
@@ -294,7 +288,7 @@ function newValueFieldState<T, V>(
       } else {
         _originalValue = this.value;
       }
-    }
+    },
   } as FieldState<T, V | null | undefined>;
 }
 
