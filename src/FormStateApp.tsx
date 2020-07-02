@@ -1,10 +1,9 @@
-import React, { useEffect } from "react";
-import "./App.css";
 import { useLocalStore, useObserver } from "mobx-react-lite";
+import React, { useEffect } from "react";
 import { createObjectState, FieldState, required } from "./formState";
-import { AuthorInput } from "./domain";
+import { AuthorInput } from "./formStateDomain";
 
-const App: React.FC = () => {
+export const FormStateApp: React.FC = () => {
   // Configure the fields/behavior for AuthorInput's fields
   const formState = useLocalStore(() =>
     createObjectState<AuthorInput>({
@@ -19,7 +18,7 @@ const App: React.FC = () => {
       },
       books: {
         type: "list",
-        rules: [(list) => ((list || []).length === 0 ? "Empty" : undefined)],
+        rules: [list => ((list || []).length === 0 ? "Empty" : undefined)],
         config: {
           title: { type: "value", rules: [required] },
         },
@@ -29,7 +28,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Simulate getting the initial form state back from a server call
-    formState.set({
+    formState.init({
       firstName: "a1",
       books: [...Array(2)].map((_, i) => ({
         title: `b${i}`,
@@ -65,33 +64,44 @@ const App: React.FC = () => {
         <div>
           form touched {formState.touched.toString()} valid {formState.valid.toString()} dirty{" "}
           {formState.dirty.toString()}
-          <button onClick={() => (formState.touched = !formState.touched)}>touch</button>
+          <button data-testid="touch" onClick={() => (formState.touched = !formState.touched)}>
+            touch
+          </button>
+          <button data-testid="reset" onClick={() => formState.reset()}>
+            reset
+          </button>
+          <button data-testid="save" onClick={() => formState.save()}>
+            save
+          </button>
+          <button data-testid="init" onClick={() => formState.init({ firstName: "a2" })}>
+            init
+          </button>
         </div>
       </header>
     </div>
   ));
 };
 
-function TextField(props: { field: FieldState<any, string | null | undefined> }) {
-  const field = props.field;
+function TextField<T>(props: { field: FieldState<T, string | null | undefined> }) {
+  const { field } = props;
   // Somewhat odd: input won't update unless we use useObserver, even though our
   // parent uses `useObserver`
   return useObserver(() => (
     <div>
       {field.key}
       <input
+        data-testid={field.key}
         value={field.value || ""}
         onBlur={() => field.blur()}
-        onChange={(e) => {
+        onChange={e => {
           field.set(e.target.value);
         }}
       />
-      touched {field.touched.toString()}
-      dirty {field.dirty.toString()}
-      valid {field.valid.toString()}
-      errors {field.errors}
+      <span data-testid={`${field.key}_touched`}>touched {field.touched.toString()}</span>
+      <span data-testid={`${field.key}_dirty`}>dirty {field.dirty.toString()}</span>
+      <span data-testid={`${field.key}_valid`}>valid {field.valid.toString()}</span>
+      <span data-testid={`${field.key}_errors`}>errors {field.errors}</span>
+      <span data-testid={`${field.key}_original`}>{field.originalValue}</span>
     </div>
   ));
 }
-
-export default App;
